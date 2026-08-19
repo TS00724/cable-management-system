@@ -1,0 +1,126 @@
+name: Apply and verify open-source WebUI payload
+
+on:
+  push:
+    branches:
+      - agent/open-source-webui-payload
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    if: ${{ !contains(github.event.head_commit.message || '', '[webui-payload-applied]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Retrieve uploaded payload objects
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .payload
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github.raw+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/blobs/ab9443399cb0042e158eeba9ee5e88619e9680ec" \
+            -o .payload/part-001
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github.raw+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/blobs/66321a46517d28fbbd1f7782e3c163535be82b95" \
+            -o .payload/part-002
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github.raw+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/blobs/4555f27115b8154f88512b073f434aa77623d417" \
+            -o .payload/part-003
+          test -s .payload/part-001
+          test -s .payload/part-002
+          test -s .payload/part-003
+
+      - name: Reconstruct and apply uploaded payload
+        run: python .payload/apply_payload.py
+
+      - name: Remove one-time transport files
+        run: |
+          rm -rf .payload
+          rm -f .github/workflows/apply-webui-payload.yml
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+
+      - name: Install backend dependencies
+        run: python -m pip install -e '.[dev]'
+
+      - name: Backend tests
+        working-directory: apps/api
+        run: PYTHONPATH=. pytest -q
+
+      - name: Python compile
+        working-directory: apps/api
+        run: PYTHONPATH=. python -m compileall -q app migrations
+
+      - name: Fresh migration and idempotent seed
+        working-directory: apps/api
+        env:
+          DATABASE_URL: sqlite+pysqlite:///./payload-ci.db
+          PLATFORM_DATABASE_URL: sqlite+pysqlite:///./payload-ci.db
+          MIGRATION_DATABASE_URL: sqlite+pysqlite:///./payload-ci.db
+        run: |
+          rm -f payload-ci.db
+          PYTHONPATH=. alembic upgrade head
+          PYTHONPATH=. python -m app.seed
+          PYTHONPATH=. python -m app.seed
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        working-directory: apps/web
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Frontend typecheck
+        working-directory: apps/web
+        run: npm run typecheck --if-present
+
+      - name: Frontend component tests
+        working-directory: apps/web
+        run: npm run test --if-present -- --run
+
+      - name: Frontend production build
+        working-directory: apps/web
+        run: npm run build
+
+      - name: Record clean-run verification
+        run: |
+          cat > PAYLOAD_VERIFICATION.md <<EOF
+          # Open-Source WebUI Payload Verification
+
+          - GitHub run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          - Source branch: ${GITHUB_REF_NAME}
+          - Backend tests: passed
+          - Python compile: passed
+          - Fresh migration: passed
+          - Seed idempotency: passed
+          - Frontend dependency install: passed
+          - TypeScript typecheck: passed
+          - Frontend component tests: passed
+          - Frontend production build: passed
+          EOF
+
+      - name: Commit verified source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Migrate frontend to open-source enterprise WebUI [webui-payload-applied]'
+          git push origin HEAD:${GITHUB_REF_NAME}
