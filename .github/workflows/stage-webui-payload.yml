@@ -1,0 +1,225 @@
+name: Stage WebUI continuation with explicit gate results
+
+on:
+  push:
+    branches:
+      - agent/open-source-webui-staging
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  stage-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      STAGING_BRANCH: agent/open-source-webui-staging
+      VERIFIED_BRANCH: agent/open-source-webui-release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check whether verified release already exists
+        id: release_check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          code="$(curl --silent --output /dev/null --write-out '%{http_code}' --location \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/PAYLOAD_VERIFICATION.md?ref=${VERIFIED_BRANCH}")"
+          if [ "${code}" = '200' ]; then
+            echo 'needed=false' >> "${GITHUB_OUTPUT}"
+            echo 'A verified release already exists; fallback will not publish duplicate source.'
+          else
+            echo 'needed=true' >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Retrieve applicator and payload objects
+        if: steps.release_check.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p .payload
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github.raw+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/.payload/apply_payload.py?ref=${VERIFIED_BRANCH}" \
+            -o .payload/apply_payload.py
+          for entry in \
+            "001:ab9443399cb0042e158eeba9ee5e88619e9680ec" \
+            "002:66321a46517d28fbbd1f7782e3c163535be82b95" \
+            "003:4555f27115b8154f88512b073f434aa77623d417"
+          do
+            number="${entry%%:*}"
+            sha="${entry##*:}"
+            curl --fail --silent --show-error --location \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github.raw+json' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/blobs/${sha}" \
+              -o ".payload/part-${number}"
+          done
+          chmod +x .payload/apply_payload.py
+
+      - name: Reconstruct continuation source
+        if: steps.release_check.outputs.needed == 'true'
+        run: python .payload/apply_payload.py
+
+      - name: Remove transport and commit reviewable source
+        if: steps.release_check.outputs.needed == 'true'
+        run: |
+          rm -rf .payload
+          rm -f .github/workflows/stage-webui-payload.yml
+          cat > STAGING_STATUS.md <<EOF
+          # Open-Source WebUI Staging Status
+
+          The continuation source has been reconstructed and committed for review.
+          Automated gate results are written by the same GitHub Actions run in a follow-up commit.
+          No failed gate is treated as complete.
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Stage open-source enterprise WebUI continuation'
+          git push origin HEAD:${STAGING_BRANCH}
+
+      - uses: actions/setup-python@v5
+        if: steps.release_check.outputs.needed == 'true'
+        with:
+          python-version: '3.13'
+
+      - name: Install backend dependencies
+        id: backend_install
+        if: steps.release_check.outputs.needed == 'true'
+        continue-on-error: true
+        run: python -m pip install -e '.[dev]'
+
+      - name: Backend tests
+        id: backend_tests
+        if: steps.release_check.outputs.needed == 'true' && steps.backend_install.outcome == 'success'
+        continue-on-error: true
+        working-directory: apps/api
+        run: PYTHONPATH=. pytest -q
+
+      - name: Python compile
+        id: python_compile
+        if: steps.release_check.outputs.needed == 'true' && steps.backend_install.outcome == 'success'
+        continue-on-error: true
+        working-directory: apps/api
+        run: PYTHONPATH=. python -m compileall -q app migrations
+
+      - name: Fresh migration and idempotent seed
+        id: migration_seed
+        if: steps.release_check.outputs.needed == 'true' && steps.backend_install.outcome == 'success'
+        continue-on-error: true
+        working-directory: apps/api
+        env:
+          DATABASE_URL: sqlite+pysqlite:///./staging-ci.db
+          PLATFORM_DATABASE_URL: sqlite+pysqlite:///./staging-ci.db
+          MIGRATION_DATABASE_URL: sqlite+pysqlite:///./staging-ci.db
+        run: |
+          rm -f staging-ci.db
+          PYTHONPATH=. alembic upgrade head
+          PYTHONPATH=. python -m app.seed
+          PYTHONPATH=. python -m app.seed
+
+      - uses: actions/setup-node@v4
+        if: steps.release_check.outputs.needed == 'true'
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        id: frontend_install
+        if: steps.release_check.outputs.needed == 'true'
+        continue-on-error: true
+        working-directory: apps/web
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Frontend typecheck
+        id: frontend_typecheck
+        if: steps.release_check.outputs.needed == 'true' && steps.frontend_install.outcome == 'success'
+        continue-on-error: true
+        working-directory: apps/web
+        run: npm run typecheck --if-present
+
+      - name: Frontend component tests
+        id: frontend_tests
+        if: steps.release_check.outputs.needed == 'true' && steps.frontend_install.outcome == 'success'
+        continue-on-error: true
+        working-directory: apps/web
+        run: npm run test --if-present -- --run
+
+      - name: Frontend production build
+        id: frontend_build
+        if: steps.release_check.outputs.needed == 'true' && steps.frontend_install.outcome == 'success'
+        continue-on-error: true
+        working-directory: apps/web
+        run: npm run build
+
+      - name: Write gate-by-gate audit
+        if: steps.release_check.outputs.needed == 'true' && always()
+        env:
+          BACKEND_INSTALL: ${{ steps.backend_install.outcome }}
+          BACKEND_TESTS: ${{ steps.backend_tests.outcome }}
+          PYTHON_COMPILE: ${{ steps.python_compile.outcome }}
+          MIGRATION_SEED: ${{ steps.migration_seed.outcome }}
+          FRONTEND_INSTALL: ${{ steps.frontend_install.outcome }}
+          FRONTEND_TYPECHECK: ${{ steps.frontend_typecheck.outcome }}
+          FRONTEND_TESTS: ${{ steps.frontend_tests.outcome }}
+          FRONTEND_BUILD: ${{ steps.frontend_build.outcome }}
+        shell: bash
+        run: |
+          all_passed=true
+          for value in "${BACKEND_INSTALL}" "${BACKEND_TESTS}" "${PYTHON_COMPILE}" "${MIGRATION_SEED}" "${FRONTEND_INSTALL}" "${FRONTEND_TYPECHECK}" "${FRONTEND_TESTS}" "${FRONTEND_BUILD}"; do
+            if [ "${value}" != 'success' ]; then all_passed=false; fi
+          done
+          cat > STAGING_STATUS.md <<EOF
+          # Open-Source WebUI Staging — Gate Audit
+
+          - GitHub Actions run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          - Backend dependency install: ${BACKEND_INSTALL}
+          - Backend tests: ${BACKEND_TESTS}
+          - Python compile: ${PYTHON_COMPILE}
+          - Fresh migration and seed idempotency: ${MIGRATION_SEED}
+          - Frontend dependency install: ${FRONTEND_INSTALL}
+          - TypeScript typecheck: ${FRONTEND_TYPECHECK}
+          - Frontend component tests: ${FRONTEND_TESTS}
+          - Frontend production build: ${FRONTEND_BUILD}
+          - All automated gates passed: ${all_passed}
+
+          Browser/WebGL E2E, accessibility, production OIDC, PostgreSQL non-owner RLS,
+          secure object storage and the remaining enterprise backlog are not covered by this run.
+          EOF
+          rm -f apps/api/staging-ci.db
+          git add -A
+          git commit -m 'Record WebUI staging verification gates' || true
+          git push origin HEAD:${STAGING_BRANCH}
+          echo "all_passed=${all_passed}" >> "${GITHUB_ENV}"
+
+      - name: Create or locate staging draft pull request
+        if: steps.release_check.outputs.needed == 'true' && always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          existing="$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${STAGING_BRANCH}" --base main --state open --json url --jq '.[0].url // empty')"
+          if [ -n "${existing}" ]; then echo "${existing}"; exit 0; fi
+          gh pr create --repo "${GITHUB_REPOSITORY}" --draft --base main --head "${STAGING_BRANCH}" \
+            --title 'Stage open-source enterprise WebUI continuation' \
+            --body 'This Draft PR exposes the reconstructed continuation source and a gate-by-gate audit in STAGING_STATUS.md. Failed or skipped gates remain explicitly incomplete.'
+
+      - name: Fail run when any automated gate is not green
+        if: steps.release_check.outputs.needed == 'true' && always()
+        shell: bash
+        run: |
+          if [ "${all_passed:-false}" != 'true' ]; then
+            echo 'One or more gates failed or were skipped. See STAGING_STATUS.md.'
+            exit 1
+          fi
