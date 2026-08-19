@@ -51,19 +51,25 @@ docker compose up --build
 
 `.env.example` 中的密码只适用于本地开发。生产环境必须使用密钥管理器、TLS、独立数据库角色和外部对象存储。
 
-## 验证
+## 开发 dry-run 验证
+
+项目当前**禁止使用 GitHub Actions**。开发期间仅保留本地 dry-run 门禁：
 
 ```bash
-make verify
+make dry-run
 ```
 
 该命令运行：
 
 - Pytest 单元、集成和安全测试
 - Python 编译检查
-- 前端 ES Module 语法检查
+- 前端 ES Module / WebGL 语法检查
+- 空 SQLite 数据库 Alembic migration
+- 同一数据库 seed 连续执行两次的幂等验证
 
-另可从空数据库执行：
+`make verify` 保留为 `make dry-run` 的兼容别名。详细证据见 `docs/DRY_RUN_STATUS.md`。
+
+也可手工从空数据库执行：
 
 ```bash
 cd apps/api

@@ -1,24 +1,36 @@
 # Verification Report
 
 **Date:** 2026-08-19  
-**Scope:** Rebuilt final workspace in `/mnt/data/cable-management-system`
+**Scope:** factual continuation workspace in `/mnt/data/sim-continued-work`  
+**Repository validation policy:** GitHub Actions disabled; local development dry-run only.
 
-## Executed gates
+## Current local dry-run — 2026-08-19 14:56 +08:00
+
+These gates were re-executed immediately before preparing the direct `main` update.
 
 | Gate | Command / method | Result |
 |---|---|---|
-| Automated tests | `make verify` → `pytest -q` | PASS — 27 tests |
-| Python compile | `python -m compileall -q app migrations` | PASS |
+| Backend tests | `cd apps/api && PYTHONPATH=. pytest -q` | PASS — 27 passed |
+| Python compile | `cd apps/api && PYTHONPATH=. python -m compileall -q app migrations` | PASS |
 | Browser module syntax | `node --check apps/web/app.js` | PASS |
 | WebGL module syntax | `node --check apps/web/webgl-viewer.js` | PASS |
-| Fresh schema | `alembic upgrade head` against empty SQLite | PASS |
-| Seed idempotency | `python -m app.seed` twice against same DB | PASS; same demo IDs |
-| API/static smoke | FastAPI `TestClient` over 10 routes | PASS — 10/10 HTTP 200 |
-| Trace semantics | Inspect dynamic trace response | PASS — exact sequence below |
-| Search priority | Exact cable identifier query | PASS — exact match first |
-| Package metadata/build | `pip wheel --no-build-isolation --no-deps` | PASS |
+| Fresh schema | Alembic upgrade against empty `/tmp/sim-dry-run.db` | PASS |
+| Seed idempotency | `python -m app.seed` twice against the same fresh SQLite DB | PASS — stable core demo identifiers |
 
-## Exact trace result
+`make dry-run` now executes the same local gate set. `make verify` remains an alias to preserve developer muscle memory. No GitHub workflow is used or retained.
+
+## Historical verified evidence retained from the prior vertical-slice release
+
+The following gates were executed and recorded in the previous verified build; they were **not re-run in the repository-policy-only dry-run above**.
+
+| Gate | Historical result |
+|---|---|
+| API/static smoke | PASS — 10/10 HTTP 200 |
+| Trace semantics | PASS — exact sequence shown below |
+| Exact identifier search | PASS — target cable ranked first in tenant scope |
+| Python wheel build | PASS — `pip wheel --no-build-isolation --no-deps` |
+
+## Exact historical trace result
 
 ```text
 port
@@ -31,19 +43,6 @@ port
 ```
 
 This path is produced from persisted `CableTermination` and `PortMapping` rows and includes ordered route segment coordinates for the selected horizontal cable.
-
-## Representative smoke routes
-
-- `/api/v1/health`
-- `/api/v1/ready`
-- `/api/v1/tenants/current`
-- `/api/v1/dashboard`
-- `/api/v1/racks/{rack_id}/elevation`
-- `/api/v1/cables/{cable_id}/trace`
-- `/api/v1/compliance/report`
-- `/api/v1/audit-events`
-- `/app/`
-- `/app/app.js`
 
 ## Security and negative cases in the 27-test suite
 
@@ -67,9 +66,9 @@ This path is produced from persisted `CableTermination` and `PortMapping` rows a
 | Real PostgreSQL forced-RLS runtime | No PostgreSQL/Docker runtime | RLS remains 85% confidence, not 100% |
 | Docker Compose boot | Docker unavailable | Compose is configuration-reviewed only |
 | Keycloak login/JWT | No integrated identity runtime; JWT validation not implemented | Identity is not production-complete |
-| Playwright/browser/WebGL visual E2E | No browser/GPU automation | UI syntax/static load is proven; visual behavior is not fully certified |
+| Playwright/browser/WebGL visual E2E | No real browser/GPU automation | UI syntax is proven; visual behavior is not fully certified |
 | Load/soak/accessibility/DAST | Tooling and scope not present | Enterprise hardening remains backlog |
 
 ## Audit interpretation
 
-“PASS” proves the stated gate only. It does not upgrade adjacent untested functionality to 100% confidence.
+“PASS” proves the stated gate only. It does not upgrade adjacent untested functionality to 100% confidence. Historical PASS entries are explicitly distinguished from the current dry-run so that the progress record does not overstate what was re-executed.

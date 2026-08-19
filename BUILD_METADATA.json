@@ -4,7 +4,7 @@
   "source_basis": "Enterprise Structured Cabling Management Platform — Master Build Prompt.md",
   "repository": "TS00724/cable-management-system",
   "remote_repository_initial_state": "README-only",
-  "remote_publish_status": "published to agent/structured-infrastructure-upload via GitHub connector",
+  "remote_publish_status": "main contains the vertical slice; current update is configured for direct main fast-forward after local dry-run",
   "scope_completion_percent": 62.26,
   "scope_remaining_percent": 37.74,
   "definition_of_done": {
@@ -33,6 +33,20 @@
     "wheel_build": "passed",
     "postgresql_runtime": "not run",
     "docker_runtime": "not available",
-    "browser_webgl_e2e": "not run"
+    "browser_webgl_e2e": "not run",
+    "last_local_dry_run": "2026-08-19T14:56:00+08:00",
+    "github_actions": "disabled"
+  },
+  "repository_policy": {
+    "github_actions": "disabled",
+    "validation": "local dry-run only during development",
+    "progress_files_in_git": true,
+    "main_update": "direct fast-forward after local dry-run"
+  },
+  "frontend_state": {
+    "current": "HTML + CSS + native ES Modules + custom WebGL",
+    "react_typescript_present": false,
+    "migration_direction": "React + TypeScript + Refine Core + Ant Design",
+    "migration_status": "not yet implemented"
   }
 }

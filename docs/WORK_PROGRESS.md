@@ -6,7 +6,7 @@
 
 - **主构建文档全部范围的加权完成度：62.26%**；明确剩余 **37.74%**。
 - **Definition of Done：23/28 完全闭合，4/28 部分闭合，1/28 未实现**；按“完成=1、部分=0.5”计算覆盖率为 **89.29%**。
-- **当前自动化结果：27 tests passed**；空 SQLite 数据库 migration 成功、seed 连续两次成功、10 个代表性 HTTP/static route 返回 200、线缆追踪精确序列通过、两个前端 ES Module 语法通过、Python 编译与 wheel 构建通过。
+- **当前本地 dry-run：27 tests passed**；Python compile PASS；两个前端 ES Module 语法 PASS；空 SQLite 数据库 migration PASS；seed 连续两次 PASS 且标识符稳定。历史 10-route smoke、trace/search/wheel 验证仍保留为上一轮证据。GitHub Actions 已按当前项目策略禁用。
 - **100% 信心不是对整个商业平台的宣称。** 表中“是”仅表示该项在明示的代码和自动化测试边界内已全部通过；无法在当前环境实证的 PostgreSQL、Docker、浏览器/WebGL、OIDC 等均未标 100%。
 
 ## 计分方法
@@ -32,17 +32,17 @@
 |Phase 3|标准 Profile 与标识符引擎|4%|75%|85%|部分完成|TIA-606-D 可配置 profile、模板渲染、规范化、唯一性、future edition 可迁移|Strict/Custom 全策略执行、完整 required-record 规则、授权条款映射未完成|否|
 |Phase 3|标签与 QR|3%|80%|95%|大部分完成|权限保护记录 URL、SVG QR、label audit、现场 UI 预览|批量标签、打印 sheet、工业打印机、真实摄像头扫描未完成|否|
 |Phase 3|TIA-606 辅助合规报告|3%|68%|90%|部分完成|重复/格式/终端/未验证发现、分数、建议、法律免责声明、mapping matrix|missing mandatory、outdated format、完整例外审批、授权条款级规则未完成|否|
-|Phase 5|项目、工单、安装、测试、审批与审计|5%|83%|100%|核心完成|STAGED→INSTALLED→TESTED→IN_SERVICE；独立审批；失败审批拒绝；append-only audit|完整 ChangeRequest/Task/Approval/InstallationRecord、planned vs as-built 时间模型未完成|是：当前演示工作流|
-|Phase 0/6|Dashboard、全局搜索与报告|2%|75%|95%|部分完成|真实租户计数、工单、机架/合规 KPI、exact identifier 优先搜索|要求的全部报告、图表趋势、XLSX/CSV 导出、复杂筛选未完成|否|
+|Phase 5|项目、工单、安装、测试、审批与审计|5%|83%|100%|核心完成|STAGED→INSTALLED→TESTED→IN_SERVICE；独立审批；失败审批拒绝；append-only audit|完整 ChangeRequest/Task/Approval/InstallationRecord、planned vs as-built history。
+|Phase 0/6|Dashboard、全局搜索与报告|2%|75%|95%|部分完成|会动䵄取真实租户计数、工单、机架、合视 KPI、新捯Ёexact identifier 优先搜索|未作全部报告、图表趋势、XLSX/CSV 导出、复杂筛选未完成|否|
 |Cross-cutting|REST API / OpenAPI|3%|72%|95%|部分完成|位置、机架、模板、设备、端口、路径、线缆、追踪、工单、测试、授权、标签、审计等 endpoint|统一分页/排序、Idempotency、ETag、bulk、bundle/document/change endpoints 未完成|否|
 |Phase 4|2D Floor Plan Editor|4%|10%|30%|未实现主体|位置和路径坐标的数据基础已存在|背景上传、选取、拖放、缩放、吸附、测量、绘制/编辑器均未实现|否|
 |Phase 4|3D 机架与选中路径|5%|62%|80%|功能性基础|原生 WebGL、透视/正交、orbit/zoom、front/rear、U 位几何、拾取、数据驱动 route|完整设施编辑、拖放保存、GLTF/BIM、LOD/instancing、浏览器视觉回归和性能测试未完成|否|
-|Phase 5|现场技术员 UX / PWA|3%|45%|80%|部分完成|大按钮 install/test/approve/QR 流程，承包商与主管主体切换，状态实时刷新|摄像头扫码、照片上传、离线队列、冲突合并、PWA 安装未实现|否|
+|Phase 5|现场技术员 UX / PWA|3%|45%|80%|部分完成|大按钮 install/test/approve/QR 流程，承包商与主管主体切换，状态实时刷新|摄像头扫码、照片上传和离线冲突合并、PWA 安装未实现|否|
 |Phase 6|文档管理与安全对象存储|4%|15%|50%|未实现主体|环境配置和 TestRecord attachment_name 扩展点|上传、授权继承、病毒扫描、版本、签名 URL、备份均未实现|否|
 |Phase 6|Import/Export、NetBox、Webhook、Integrations|6%|5%|30%|设计为主|NetBox adapter ADR/映射设计|CSV/XLSX dry-run、export、NetBox client/conflict、signed retry webhook 均未实现|否|
 |Phase 6|安全硬化与可观测性|4%|40%|85%|部分完成|CSP/headers/request ID、权限/隔离/自审批/审计测试、health/ready|rate limit、JWT、CSRF/cookie、uploads、SBOM、SAST/DAST、metrics/traces/alerts 未完成|否|
 |Phase 6|容器部署、备份与恢复|4%|45%|75%|配置完成/运行未实证|Dockerfile、Compose、Keycloak realm、Postgres role init、deployment doc|当前无 Docker 实跑；Kubernetes、PITR、restore、legal hold、生产 secrets 未完成|否|
-|Testing|自动化测试与质量门禁|4%|65%|100%|核心测试完成|27 tests pass；fresh migration；seed twice；10 route smoke；JS syntax；Python compile/wheel|Playwright E2E、真实 PostgreSQL、WebGL screenshot、accessibility、load/soak、DAST 未完成|是：本次已执行测试结果；否：完整测试要求|
+|Testing|开发 dry-run 与质量门禁|4%|65%|100%|核心本地门禁完成|27 tests pass；fresh migration；seed twice；JS/WebGL syntax；Python compile；历史 smoke/trace/search/wheel 证据保留|Playwright E2E、真实 PostgreSQL、WebGL screenshot、accessibility、load/soak、DAST 未完成；GitHub Actions 明确禁用|是：本次已执行 dry-run 结果；否：完整测试要求|
 
 ## Definition of Done 验收
 
@@ -107,8 +107,11 @@
 4. 2D/3D 编辑器与大场景性能：drag/save、GLTF、LOD/instancing、Playwright/WebGL。
 5. 企业迁移与运营：CSV/XLSX dry-run、NetBox、webhooks、报告导出、observability、backup/restore。
 
-## 发布状态
+## 发布状态与仓库策略
 
-- 本地源码和本地 Git commit 可交付。
-- GitHub 连接器能读取该仓库，但创建分支/PR 返回 `403 Resource not accessible by integration`，因此远端 `main` 未被修改；不能虚构已推送或已开 PR。
+- 第一条纵向链路已经通过 PR #1 合并到远端 `main`；该历史状态已由 GitHub 实际合并记录确认。
+- 当前项目策略：**禁止使用 GitHub Actions**。`.github/workflows/ci.yml` 已从准备提交的源码树删除。
+- 开发阶段只保留本地 dry-run 门禁，证据见 `docs/DRY_RUN_STATUS.md` 和 `docs/VERIFICATION_REPORT.md`。
+- 进度、验证、前端审核和 continuation 状态文件与源码一起进入 Git。
+- 当前可见工作区仍是原生 HTML/CSS/ES Modules + 自研 WebGL；React/TypeScript/Refine 迁移方向已确定，但本工作区中尚未实现，因此未提高主项目 62.26% 的加权完成度。
 - Docker Compose 已进行静态配置审查，但没有在本次环境实跑。
