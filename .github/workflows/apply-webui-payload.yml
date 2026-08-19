@@ -6,22 +6,28 @@ on:
     paths:
       - ".publish/webui-patch-part-*"
       - ".github/workflows/apply-webui-payload.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - ".publish/webui-patch-part-*"
+      - ".github/workflows/apply-webui-payload.yml"
 
 permissions:
   contents: write
 
 concurrency:
-  group: apply-webui-${{ github.ref }}
+  group: apply-webui-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   apply-and-verify:
-    if: contains(github.event.head_commit.message, 'stage verified WebUI payload')
+    if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'stage verified WebUI payload')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -86,4 +92,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "Migrate WebUI to React Refine and Ant Design"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          target_branch="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          git push origin "HEAD:${target_branch}"
