@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07101d">
+  <title>Structured Infrastructure Manager</title>
+  <link rel="stylesheet" href="/app/styles.css">
+</head>
+<body>
+  <div id="boot" class="boot">
+    <div class="logo">SIM</div>
+    <div><strong>Structured Infrastructure Manager</strong><span>正在读取持久化基础设施数据…</span></div>
+  </div>
+
+  <div id="shell" class="shell" hidden>
+    <aside class="sidebar">
+      <div class="brand"><div class="logo">SIM</div><div><strong>Structured</strong><span>Infrastructure Manager</span></div></div>
+      <nav>
+        <button class="nav active" data-view="dashboard"><b>01</b>运营总览</button>
+        <p>基础设施</p>
+        <button class="nav" data-view="rack"><b>02</b>3D 机架</button>
+        <button class="nav" data-view="trace"><b>03</b>线缆追踪</button>
+        <p>现场与治理</p>
+        <button class="nav" data-view="field"><b>04</b>现场工作流</button>
+        <button class="nav" data-view="compliance"><b>05</b>TIA-606 合规</button>
+        <button class="nav" data-view="audit"><b>06</b>审计记录</button>
+      </nav>
+      <div class="tenant"><i></i><div><small>当前租户</small><strong id="tenant-name">—</strong></div></div>
+    </aside>
+
+    <main>
+      <header>
+        <div><p id="breadcrumb">Northstar University / Main Campus</p><h1 id="page-title">运营总览</h1></div>
+        <div class="top-actions">
+          <label class="search"><span>⌕</span><input id="search" placeholder="搜索线缆、机架、设备、工单…" autocomplete="off"></label>
+          <button id="refresh" class="square">↻</button>
+          <div class="user"><span>AA</span><div><strong>Alice Admin</strong><small>Tenant Owner</small></div></div>
+        </div>
+      </header>
+      <section id="notice" class="notice" hidden></section>
+      <section id="search-results" class="search-results" hidden></section>
+
+      <section id="view-dashboard" class="view active">
+        <div id="metrics" class="metrics"></div>
+        <div class="dashboard-grid">
+          <article class="panel span7">
+            <div class="panel-head"><div><small>设施状态</small><h2>Engineering Building Upgrade</h2></div><span class="badge good">ACTIVE</span></div>
+            <div id="campus" class="campus"></div>
+          </article>
+          <article class="panel span5">
+            <div class="panel-head"><div><small>执行队列</small><h2>近期工单</h2></div><button class="link" data-go="field">打开现场模式 →</button></div>
+            <div id="orders" class="list"></div>
+          </article>
+          <article class="panel span7">
+            <div class="panel-head"><div><small>物理连通性</small><h2>示范链路</h2></div><button class="link" data-go="trace">查看完整追踪 →</button></div>
+            <div id="mini-trace" class="mini-trace"></div>
+          </article>
+          <article class="panel span5">
+            <div class="panel-head"><div><small>容量与治理</small><h2>机架与合规</h2></div></div>
+            <div id="health" class="health"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-rack" class="view">
+        <div class="workspace">
+          <article class="panel viewer-panel">
+            <div class="panel-head">
+              <div><small>WEBGL DIGITAL INFRASTRUCTURE</small><h2 id="rack-title">Rack</h2></div>
+              <div class="segmented"><button id="front" class="on">前视</button><button id="rear">后视</button><button id="projection">透视</button></div>
+            </div>
+            <div class="canvas-wrap"><canvas id="rack-canvas"></canvas><div class="help">拖动：环绕 · 滚轮：缩放 · 点击设备：检查</div></div>
+          </article>
+          <aside class="panel inspector">
+            <div class="panel-head"><div><small>OBJECT INSPECTOR</small><h2>对象检查器</h2></div></div>
+            <div id="rack-inspector" class="empty">点击 3D 视图中的设备。</div>
+            <div id="rack-capacity"></div>
+          </aside>
+        </div>
+        <article class="panel">
+          <div class="panel-head"><div><small>PERSISTED EQUIPMENT</small><h2>已安装设备</h2></div></div>
+          <div class="table-wrap"><table><thead><tr><th>标识符</th><th>名称</th><th>类型</th><th>U 位</th><th>端口</th><th>面</th></tr></thead><tbody id="device-table"></tbody></table></div>
+        </article>
+      </section>
+
+      <section id="view-trace" class="view">
+        <div class="trace-grid">
+          <article class="panel">
+            <div class="panel-head"><div><small>RECURSIVE PHYSICAL GRAPH</small><h2 id="trace-title">端到端物理路径</h2></div><span id="trace-state" class="badge good">COMPLETE</span></div>
+            <div id="trace-flow" class="trace-flow"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><small>COORDINATE-DRIVEN ROUTE</small><h2>3D 路径高亮</h2></div><span class="badge neutral">SELECTIVE RENDER</span></div>
+            <div class="canvas-wrap route"><canvas id="route-canvas"></canvas><div class="help">路径来自有序 PathwaySegment 坐标</div></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-field" class="view field">
+        <article class="panel field-head"><div><small>FIELD TECHNICIAN MODE</small><h2>WO-ENG-0001 · WA-2-101-A</h2><p id="field-id">正在读取线缆…</p></div><div id="field-state" class="state">READY</div></article>
+        <div class="field-grid">
+          <article class="panel steps">
+            <div class="step"><span>1</span><div><strong>扫描与核对</strong><small>读取权限保护的 QR 线缆记录</small></div><button id="label">生成 QR</button></div>
+            <div class="step"><span>2</span><div><strong>安装</strong><small>由 Metro Structured Cabling 技术员执行</small></div><button id="install">标记 Installed</button></div>
+            <div class="step"><span>3</span><div><strong>测试</strong><small>提交线序、长度与认证结论</small></div><button id="test-pass">提交 PASS</button></div>
+            <div class="step"><span>4</span><div><strong>独立审批</strong><small>由 Northstar 主管审批并投入使用</small></div><button id="approve">审批 In Service</button></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><small>FIELD RECORD</small><h2>现场记录</h2></div></div>
+            <div id="qr" class="qr"><div>QR</div><p>点击“生成 QR”预览。</p></div>
+            <div id="field-log" class="field-log"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-compliance" class="view">
+        <div class="compliance-grid">
+          <article class="panel score-card"><small>ACTIVE STANDARD PROFILE</small><h2 id="profile">TIA-606-D</h2><div class="score"><strong id="score">—</strong><span>合规得分</span></div><p id="legal"></p></article>
+          <article class="panel"><div class="panel-head"><div><small>VALIDATION FINDINGS</small><h2>例外与整改</h2></div><span id="finding-count" class="badge warn">0</span></div><div id="findings" class="findings"></div></article>
+        </div>
+      </section>
+
+      <section id="view-audit" class="view">
+        <article class="panel"><div class="panel-head"><div><small>APPEND-ONLY EVENT STREAM</small><h2>租户审计时间线</h2></div><span class="badge neutral">IMMUTABLE</span></div><div id="audits" class="audits"></div></article>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="/app/app.js"></script>
+</body>
+</html>
