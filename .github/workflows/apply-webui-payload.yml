@@ -51,10 +51,10 @@ jobs:
           import re
 
           client = Path("apps/web/src/api/client.test.ts")
-          lines = client.read_text().splitlines()
-          assert lines[3].startswith("import {") and 'from "./client"' in lines[3], lines[3]
-          lines[3] = lines[3].replace("import ", "import type ", 1)
-          client.write_text("\n".join(lines) + "\n")
+          text = client.read_text()
+          old = 'import { ApiError } from "./errors";'
+          assert old in text
+          client.write_text(text.replace(old, 'import type { ApiError } from "./errors";', 1))
 
           shell = Path("apps/web/src/components/AppShell.tsx")
           text = shell.read_text()
