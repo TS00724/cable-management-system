@@ -1,0 +1,58 @@
+name: Publish source payload
+
+on:
+  push:
+    branches:
+      - agent/structured-infrastructure-upload
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .publish/payload-* > /tmp/payload.b64
+          base64 -d /tmp/payload.b64 > /tmp/payload.tar.gz
+          mkdir -p /tmp/source
+          tar -xzf /tmp/payload.tar.gz -C /tmp/source
+          rsync -a --delete --exclude='.git/' --exclude='.publish/' --exclude='.github/workflows/publish-source.yml' /tmp/source/ ./
+          rm -rf .publish
+          rm -f .github/workflows/publish-source.yml
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('BUILD_METADATA.json')
+          d = json.loads(p.read_text())
+          d['remote_publish_status'] = 'published to agent/structured-infrastructure-upload via GitHub connector'
+          p.write_text(json.dumps(d, indent=2, ensure_ascii=False) + '\n')
+          PY
+
+          find . -type f \
+            ! -path './.git/*' \
+            ! -path './MANIFEST.sha256' \
+            -print0 | sort -z | xargs -0 sha256sum > MANIFEST.sha256
+
+      - name: Commit expanded source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No changes'
+            exit 0
+          fi
+          git commit -m 'Build structured infrastructure vertical slice'
+          git push origin HEAD:agent/structured-infrastructure-upload
