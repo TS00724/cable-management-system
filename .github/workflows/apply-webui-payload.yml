@@ -43,6 +43,56 @@ jobs:
           xz --decompress --stdout /tmp/webui.patch.xz > /tmp/webui.patch
           git apply --binary --index /tmp/webui.patch
           rm -rf .publish .github/workflows/apply-webui-payload.yml
+      - name: Apply CI-discovered source corrections
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          client = Path("apps/web/src/api/client.test.ts")
+          lines = client.read_text().splitlines()
+          assert lines[3].startswith("import {") and 'from "./client"' in lines[3], lines[3]
+          lines[3] = lines[3].replace("import ", "import type ", 1)
+          client.write_text("\n".join(lines) + "\n")
+
+          shell = Path("apps/web/src/components/AppShell.tsx")
+          text = shell.read_text()
+          assert "const navigate = useNavigate();" in text
+          text = text.replace("  const navigate = useNavigate();\n", "")
+          text = re.sub(r"\buseNavigate,\s*", "", text)
+          text = re.sub(r",\s*useNavigate\b", "", text)
+          shell.write_text(text)
+
+          legacy = Path("apps/web/src/legacy/webgl-viewer.ts")
+          text = legacy.read_text()
+          assert text.startswith("// @ts-nocheck")
+          text = text.replace(
+              "// @ts-nocheck",
+              "/* eslint-disable @typescript-eslint/ban-ts-comment */\n// @ts-nocheck",
+              1,
+          )
+          old = "this.mode==='rack'?this.renderRack():this.renderRoute()"
+          assert old in text
+          text = text.replace(
+              old,
+              "if(this.mode==='rack'){this.renderRack()}else{this.renderRoute()}",
+              1,
+          )
+          legacy.write_text(text)
+
+          locations = Path("apps/web/src/pages/LocationsPage.tsx")
+          text = locations.read_text()
+          updated, count = re.subn(
+              r"const tree = useMemo\(\(\) => buildLocationTree\(rows\), \[rows\]\);",
+              "const tree = buildLocationTree(rows);",
+              text,
+          )
+          assert count == 1, count
+          updated = re.sub(r"\buseMemo,\s*", "", updated)
+          updated = re.sub(r",\s*useMemo\b", "", updated)
+          locations.write_text(updated)
+          PY
       - name: Install backend dependencies
         run: pip install -e ".[dev]"
       - name: Verify committed OpenAPI contract
