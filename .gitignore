@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.venv/
+node_modules/
+.next/
+.env
+*.db
+*.sqlite3
+storage/
+.DS_Store
+.idea/
+.vscode/

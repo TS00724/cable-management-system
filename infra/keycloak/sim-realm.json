@@ -1,0 +1,16 @@
+{
+  "realm": "sim",
+  "enabled": true,
+  "displayName": "Structured Infrastructure Manager",
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "sim-web",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://localhost:8000/*"],
+      "webOrigins": ["http://localhost:8000"]
+    },
+    {"clientId": "sim-api", "bearerOnly": true}
+  ]
+}
