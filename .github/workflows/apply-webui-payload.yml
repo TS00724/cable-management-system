@@ -53,7 +53,7 @@ jobs:
           cmp /tmp/openapi.expected.json apps/web/openapi.json
       - name: Install frontend dependencies and lock graph
         working-directory: apps/web
-        run: npm install --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Frontend lint
         working-directory: apps/web
         run: npm run lint
