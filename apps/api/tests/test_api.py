@@ -83,9 +83,11 @@ def test_web_application_static_assets_are_served() -> None:
     page = client.get("/app/")
     assert page.status_code == 200
     assert "Structured Infrastructure Manager" in page.text
+    assert 'id="export-cables"' in page.text
     script = client.get("/app/app.js")
     assert script.status_code == 200
     assert "Infrastructure3DViewer" in script.text
+    assert "downloadCableSchedule" in script.text
     viewer = client.get("/app/webgl-viewer.js")
     assert viewer.status_code == 200
     assert "class Infrastructure3DViewer" in viewer.text

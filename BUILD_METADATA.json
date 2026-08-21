@@ -1,52 +1,62 @@
 {
   "project": "Structured Infrastructure Manager",
   "audit_date": "2026-08-19",
-  "source_basis": "Enterprise Structured Cabling Management Platform — Master Build Prompt.md",
+  "source_basis": "Enterprise Structured Cabling Management Platform — Master Build Prompt.md plus Open-Source WebUI continuation prompt",
   "repository": "TS00724/cable-management-system",
-  "remote_repository_initial_state": "README-only",
-  "remote_publish_status": "main contains the vertical slice; current update is configured for direct main fast-forward after local dry-run",
-  "scope_completion_percent": 62.26,
-  "scope_remaining_percent": 37.74,
+  "remote_publish_status": "local P0 batch passed; GitHub connector write resources unavailable; remote main not advanced",
+  "scope_completion_percent": 66.4,
+  "scope_remaining_percent": 33.6,
   "definition_of_done": {
-    "complete": 23,
+    "complete": 24,
     "partial": 4,
-    "not_complete": 1,
-    "partial_credit_coverage_percent": 89.29
+    "not_complete": 0,
+    "partial_credit_coverage_percent": 92.86
+  },
+  "latest_batch": {
+    "name": "P0 identity, HTTP security, PostgreSQL RLS proof harness and isolated React scaffold",
+    "oidc_api_verification": true,
+    "postgres_rls_attack_matrix_implemented": true,
+    "postgres_rls_runtime_executed": false,
+    "http_security_boundary": true,
+    "react_refine_scaffold": true,
+    "react_production_build_executed": false,
+    "legacy_webui_preserved": true
   },
   "verification": {
-    "pytest": "27 passed",
-    "make_verify": "passed",
-    "fresh_migration": "passed on SQLite",
-    "seed_idempotency": "passed twice",
-    "http_static_smoke": "10/10 passed",
-    "trace_sequence": [
-      "port",
-      "cable",
-      "port",
-      "internal_mapping",
-      "port",
-      "cable",
-      "port"
-    ],
-    "frontend_syntax": "passed",
+    "local_dry_run": "passed in 14 seconds",
+    "pytest": "56 passed; 1 real-PostgreSQL runtime gate skipped",
+    "p0_focused": "24 passed; 1 real-PostgreSQL runtime gate skipped",
     "python_compile": "passed",
-    "wheel_build": "passed",
-    "postgresql_runtime": "not run",
-    "docker_runtime": "not available",
-    "browser_webgl_e2e": "not run",
-    "last_local_dry_run": "2026-08-19T14:56:00+08:00",
+    "legacy_frontend_syntax": "passed",
+    "react_source_gate": "package declarations, TS/TSX parse, context/token smoke passed",
+    "fresh_migration": "passed on SQLite",
+    "seed_idempotency": "passed twice with nine stable IDs",
+    "seeded_export_smoke": "3 rows; first MC-BB-OS2-00001; one audit event",
+    "postgresql_runtime": "not executed; DSNs unavailable",
+    "npm_typecheck_test_build": "not executed; registry request timed out",
+    "live_keycloak": "not executed",
+    "browser_e2e": "not executed",
+    "docker_tls_proxy": "not executed",
     "github_actions": "disabled"
   },
   "repository_policy": {
     "github_actions": "disabled",
-    "validation": "local dry-run only during development",
+    "validation": "local make dry-run before main update",
     "progress_files_in_git": true,
-    "main_update": "direct fast-forward after local dry-run"
+    "main_update": "direct non-force fast-forward",
+    "force_push": false
   },
   "frontend_state": {
-    "current": "HTML + CSS + native ES Modules + custom WebGL",
-    "react_typescript_present": false,
-    "migration_direction": "React + TypeScript + Refine Core + Ant Design",
-    "migration_status": "not yet implemented"
+    "active": "HTML + CSS + native ES Modules + custom WebGL at /app/",
+    "migration_target": "React + TypeScript + Refine Core + Ant Design at apps/web-react",
+    "migration_source_present": true,
+    "migration_runtime_status": "source gate passed; lockfile/typecheck/Vitest/Vite build/browser E2E not executed",
+    "target_route": "/app-next/ only when dist exists"
+  },
+  "publication": {
+    "last_readable_main": "2536ee32b76cc70d9e6efa172fd24881288568b6",
+    "remote_main_advanced": false,
+    "write_error": "Resource not found",
+    "github_actions_used": false
   }
 }

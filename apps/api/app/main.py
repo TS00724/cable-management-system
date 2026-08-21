@@ -7,7 +7,8 @@ from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Header, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
@@ -18,11 +19,13 @@ from app.audit import record_audit
 from app.config import get_settings
 from app.db import SessionLocal
 from app.exceptions import DomainError, NotFoundError
+from app.http_security import SecurityBoundaryMiddleware
 from app.models import (
     AccessGrant,
     AccessGrantStatus,
     AuditEvent,
     Cable,
+    CableStatus,
     Device,
     DeviceTemplate,
     Location,
@@ -75,35 +78,26 @@ app = FastAPI(
     openapi_url=f"{settings.api_prefix}/openapi.json",
     docs_url=f"{settings.api_prefix}/docs",
 )
+app.add_middleware(SecurityBoundaryMiddleware, settings=settings)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=list(settings.cors_origins),
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=list(settings.cors_methods),
+    allow_headers=list(settings.cors_headers),
+    expose_headers=list(settings.cors_expose_headers),
 )
-
-
-@app.middleware("http")
-async def request_context(request: Request, call_next):  # type: ignore[no-untyped-def]
-    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
-    request.state.request_id = request_id
-    response = await call_next(request)
-    response.headers["X-Request-ID"] = request_id
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()"
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
-        "connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
-    )
-    return response
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
 
 
 @app.exception_handler(DomainError)
 async def domain_error_handler(_request: Request, exc: DomainError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status_code, content={"detail": str(exc)})
+    headers = {"WWW-Authenticate": "Bearer"} if exc.status_code == 401 else None
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": str(exc)},
+        headers=headers,
+    )
 
 
 @app.exception_handler(IntegrityError)
@@ -238,6 +232,51 @@ def dashboard(
     db: Session = Depends(get_db), principal: Principal = Depends(get_principal)
 ) -> dict[str, Any]:
     return ReportingService(db, principal).dashboard()
+
+
+@app.get(f"{settings.api_prefix}/reports/cable-schedule.csv", tags=["reporting"])
+def export_cable_schedule(
+    status: CableStatus | None = None,
+    project_id: uuid.UUID | None = None,
+    q: Annotated[str | None, Query(max_length=180)] = None,
+    limit: Annotated[int, Query(ge=1, le=10_000)] = 10_000,
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(get_principal),
+) -> Response:
+    export = ReportingService(db, principal).export_cable_schedule(
+        status=status,
+        project_id=project_id,
+        query=q,
+        limit=limit,
+    )
+    record_audit(
+        db,
+        principal=principal,
+        action="report.cable_schedule.exported",
+        object_type="cable_schedule",
+        object_id=principal.tenant_id,
+        after={
+            "format": "csv",
+            "filename": export.filename,
+            "row_count": export.row_count,
+            "total_count": export.total_count,
+            "truncated": export.truncated,
+            "filters": export.filters,
+        },
+        project_id=project_id,
+    )
+    db.commit()
+    return Response(
+        content=export.content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{export.filename}"',
+            "Cache-Control": "no-store",
+            "X-Export-Row-Count": str(export.row_count),
+            "X-Export-Total-Count": str(export.total_count),
+            "X-Export-Truncated": str(export.truncated).lower(),
+        },
+    )
 
 
 @app.get(f"{settings.api_prefix}/search", tags=["search"])
@@ -767,9 +806,17 @@ def demo_context(db: Session = Depends(get_platform_db)) -> dict[str, str]:
     }
 
 
-WEB_ROOT = Path(__file__).resolve().parents[2] / "web"
+APPS_ROOT = Path(__file__).resolve().parents[2]
+WEB_ROOT = APPS_ROOT / "web"
+WEB_REACT_DIST = APPS_ROOT / "web-react" / "dist"
 if WEB_ROOT.exists():
     app.mount("/app", StaticFiles(directory=WEB_ROOT, html=True), name="web")
+if WEB_REACT_DIST.exists():
+    app.mount(
+        "/app-next",
+        StaticFiles(directory=WEB_REACT_DIST, html=True),
+        name="web-react",
+    )
 
 
 @app.get("/", include_in_schema=False)

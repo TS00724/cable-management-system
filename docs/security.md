@@ -1,27 +1,31 @@
 # 安全设计与未闭合风险
 
-## 已实现
+## 已实现并自动验证
 
-- 应用层和数据库策略层的租户隔离设计
-- 请求 ID、安全响应头、CSP、`nosniff` 和 frame 限制
-- 权限不是角色名判断，而是主体 + 租户 + 项目 + 位置 + 动作
-- 测试者不能审批自己的受限测试
-- 端口占用、介质不兼容、机架重叠等完整性拒绝
-- 审计事件不可修改/删除
-- 平台数据库角色与普通应用角色分离
-- 密钥从环境变量读取；仓库不提交 `.env`
+- OIDC JWT RS256/JWKS 签名、algorithm/kid、issuer、audience、expiry 和 required claims
+- `oidc_subject` 主体映射和显式 opt-in verified-email linking
+- token tenant claim 与请求 tenant 一致性
+- OIDC 只建立身份，TenantMembership / AccessGrant 继续决定授权
+- `oidc` 模式禁止回退到开发身份头，401 Bearer challenge
+- 严格显式 CORS origins/methods/headers/exposed headers
+- Trusted Host、HTTPS enforcement、可信代理边界和 HSTS
+- 单进程固定窗口 rate limit、429/Retry-After/额度 headers
+- cookie 身份 double-submit CSRF；Bearer 请求不依赖 cookie CSRF
+- CSP、`nosniff`、frame、referrer、permissions 和 API no-store
+- 生产设置拒绝 demo auth、HTTP OIDC/CORS、wildcard credentialed CORS、默认 bootstrap
+  secret、不安全 SameSite=None 及关闭 HTTPS 的生产配置
+- 既有租户隔离、端口占用、介质兼容、机架重叠、独立审批和 append-only audit 规则
+- 普通应用数据库角色显式 `NOSUPERUSER NOBYPASSRLS`；平台角色单独 `BYPASSRLS`
 
-## 必须在生产前完成
+## 仍需生产实证
 
-1. 校验 OIDC JWT 的发行者、受众、签名、时效和 nonce；禁止演示请求头认证。
-2. 使用真实 PostgreSQL 普通角色执行 RLS 攻击测试。
-3. TLS、HSTS、安全 Cookie、CSRF 策略和严格 CORS。
-4. API 限流、登录/异常授权告警和敏感操作二次验证。
-5. 文件类型嗅探、病毒扫描、大小限制、隔离桶和短期签名下载。
-6. 依赖锁定、SBOM、SAST、DAST、容器扫描和密钥扫描。
-7. WebSocket/Webhook/导出/搜索的同等租户边界测试。
-8. 渗透、浏览器 XSS/CSRF、负载和恢复演练。
+1. 真实 Keycloak 登录、token refresh/logout、MFA 和 session expiry E2E。
+2. 真实 PostgreSQL 普通应用角色执行 `make postgres-rls`。
+3. 多副本环境使用共享原子限流后端，并验证 ingress / proxy IP 信任。
+4. TLS termination、HSTS preload 和 secure-cookie 部署验证。
+5. 私有对象存储、MIME/size 检查、malware scan 和短期签名下载。
+6. 锁文件、SBOM、SAST、DAST、容器与 secret scan。
+7. WebSocket/Webhook/import/export/search 同等租户边界和负载测试。
 
-## 威胁边界
-
-`X-Tenant-ID` 和 `X-Actor-ID` 只用于演示。生产主体必须来自已验证令牌，租户上下文必须由应用授权映射得出，不能信任任意客户端请求头。
+`X-Tenant-ID` 只是请求工作上下文，不是授权凭据。即使 token 含 tenant claim，主体仍必须
+通过数据库中的成员关系或显式 AccessGrant 才能访问对应 tenant/project/location。

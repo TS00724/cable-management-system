@@ -1,21 +1,19 @@
-.PHONY: test dry-run verify seed run
-
-DRY_RUN_DB ?= /tmp/sim-dry-run.db
+.PHONY: test verify dry-run postgres-rls seed run
 
 test:
-	cd apps/api && PYTHONPATH=. pytest -q
+	cd apps/api && PYTHONPATH=.:../.. pytest -q
 
-dry-run: test
+verify: test
 	cd apps/api && PYTHONPATH=. python -m compileall -q app migrations
 	node --check apps/web/app.js
 	node --check apps/web/webgl-viewer.js
-	rm -f $(DRY_RUN_DB)
-	cd apps/api && DATABASE_URL=sqlite+pysqlite:///$(DRY_RUN_DB) PLATFORM_DATABASE_URL=sqlite+pysqlite:///$(DRY_RUN_DB) MIGRATION_DATABASE_URL=sqlite+pysqlite:///$(DRY_RUN_DB) PYTHONPATH=. alembic upgrade head
-	cd apps/api && DATABASE_URL=sqlite+pysqlite:///$(DRY_RUN_DB) PLATFORM_DATABASE_URL=sqlite+pysqlite:///$(DRY_RUN_DB) MIGRATION_DATABASE_URL=sqlite+pysqlite:///$(DRY_RUN_DB) PYTHONPATH=. python -m app.seed
-	cd apps/api && DATABASE_URL=sqlite+pysqlite:///$(DRY_RUN_DB) PLATFORM_DATABASE_URL=sqlite+pysqlite:///$(DRY_RUN_DB) MIGRATION_DATABASE_URL=sqlite+pysqlite:///$(DRY_RUN_DB) PYTHONPATH=. python -m app.seed
-	rm -f $(DRY_RUN_DB)
+	./scripts/check-web-react-source.sh
 
-verify: dry-run
+dry-run:
+	./scripts/dry-run.sh
+
+postgres-rls:
+	PYTHONPATH=apps/api:. python scripts/postgres_rls_attack_matrix.py
 
 seed:
 	cd apps/api && PYTHONPATH=. python -m app.seed
