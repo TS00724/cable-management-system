@@ -1,13 +1,15 @@
 # Third-Party Software Register
 
-| Package / image | Intended range | License | Repository | Purpose | Modifications | Redistribution notes |
-|---|---:|---|---|---|---|---|
-| FastAPI | 0.128.x | MIT | fastapi/fastapi | Typed REST API | None | Retain notice |
-| SQLAlchemy | 2.0.x | MIT | sqlalchemy/sqlalchemy | ORM and transactions | None | Retain notice |
-| Alembic | 1.18.x | MIT | sqlalchemy/alembic | Database migrations | None | Retain notice |
-| PostgreSQL | 17.x | PostgreSQL | postgres/postgres | Primary database and RLS | None | Retain notice |
-| Keycloak | 26.x | Apache-2.0 | keycloak/keycloak | OIDC/SSO/MFA scaffold | Realm configuration | Retain notices |
-| qrcode | 8.x | BSD-3-Clause | lincolnloop/python-qrcode | Permission-protected QR SVG | None | Retain notice |
+| Package / component | Version range / pin | License | Purpose | Modifications / redistribution notes |
+|---|---|---|---|---|
+| FastAPI | >=0.128,<0.129 | MIT | API framework | no vendoring |
+| SQLAlchemy | >=2.0.50,<2.1 | MIT | relational ORM | no vendoring |
+| Alembic | >=1.18,<1.19 | MIT | migrations | no vendoring |
+| PostgreSQL | supported deployment | PostgreSQL License | production database/RLS | external service |
+| Keycloak | deployment image | Apache-2.0 | OIDC identity provider | realm configuration only |
+| PyJWT[crypto] | >=2.10,<3 | MIT | JWT/JWK verification | no vendoring |
+| HTTPX | >=0.28,<0.29 | BSD-3-Clause | OIDC discovery/JWKS HTTP | redirects disabled |
+| qrcode | >=8,<9 | BSD | QR SVG labels | no vendoring |
+| React / Refine / Ant Design stack | exact pins in `apps/web-react/package.json` | MIT/Apache-2.0 | isolated enterprise WebUI scaffold | no copied branding/assets; lockfile and transitive notice still required |
 
-The browser client uses native Web APIs and WebGL, so the delivered vertical slice has no JavaScript runtime dependency.
-Production release must generate lockfiles, an SBOM, and a final license review.
+See `THIRD_PARTY_NOTICES.md` and `docs/OPEN_SOURCE_INVENTORY.md` for direct frontend details.

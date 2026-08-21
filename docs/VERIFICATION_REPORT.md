@@ -1,74 +1,89 @@
 # Verification Report
 
-**Date:** 2026-08-19  
-**Scope:** factual continuation workspace in `/mnt/data/sim-continued-work`  
-**Repository validation policy:** GitHub Actions disabled; local development dry-run only.
+**Date:** 2026-08-19 19:27 +0800  
+**Scope:** P0 identity, database-boundary proof harness, HTTP security and isolated React scaffold
 
-## Current local dry-run — 2026-08-19 14:56 +08:00
+## Executed gates
 
-These gates were re-executed immediately before preparing the direct `main` update.
-
-| Gate | Command / method | Result |
+| Gate | Command | Result |
 |---|---|---|
-| Backend tests | `cd apps/api && PYTHONPATH=. pytest -q` | PASS — 27 passed |
-| Python compile | `cd apps/api && PYTHONPATH=. python -m compileall -q app migrations` | PASS |
-| Browser module syntax | `node --check apps/web/app.js` | PASS |
-| WebGL module syntax | `node --check apps/web/webgl-viewer.js` | PASS |
-| Fresh schema | Alembic upgrade against empty `/tmp/sim-dry-run.db` | PASS |
-| Seed idempotency | `python -m app.seed` twice against the same fresh SQLite DB | PASS — stable core demo identifiers |
+| Full local gate | `make dry-run` | PASS — complete in 14 seconds |
+| Python/API/domain/security | `PYTHONPATH=.:../.. pytest -q` | PASS — 56 passed, 1 skipped |
+| Focused P0 | `pytest -q test_auth_oidc.py test_http_security.py test_postgres_rls_matrix.py` | PASS — 24 passed, 1 skipped |
+| Python compile | `python -m compileall -q app migrations` | PASS |
+| Legacy JS/WebGL | two `node --check` commands | PASS |
+| React source gate | `scripts/check-web-react-source.sh` | PASS |
+| Fresh SQLite migration | `alembic upgrade head` | PASS |
+| Seed idempotency | same fresh DB seeded twice | PASS — 9 stable IDs |
+| Seeded export | `scripts/seeded-export-smoke.py` | PASS — 3 rows and one audit event |
 
-`make dry-run` now executes the same local gate set. `make verify` remains an alias to preserve developer muscle memory. No GitHub workflow is used or retained.
+## P0 #1 — OIDC JWT and Principal mapping
 
-## Historical verified evidence retained from the prior vertical-slice release
+Automated tests prove:
 
-The following gates were executed and recorded in the previous verified build; they were **not re-run in the repository-policy-only dry-run above**.
+- RS256 cryptographic signature and `kid` selection against JWKS
+- algorithm allow-list
+- exact issuer and audience
+- expiry and required `sub`/`iss`/`aud`/`exp` claims
+- unknown key, malformed token and invalid signature rejection
+- `UserIdentity.oidc_subject` mapping
+- opt-in verified-email linking
+- token tenant claim must match requested tenant
+- `AUTH_MODE=oidc` does not fall back to `X-Actor-ID`
+- HTTP 401 with `WWW-Authenticate: Bearer`
+- after authentication, existing TenantMembership / AccessGrant Principal authorization remains authoritative
 
-| Gate | Historical result |
-|---|---|
-| API/static smoke | PASS — 10/10 HTTP 200 |
-| Trace semantics | PASS — exact sequence shown below |
-| Exact identifier search | PASS — target cable ranked first in tenant scope |
-| Python wheel build | PASS — `pip wheel --no-build-isolation --no-deps` |
+Live Keycloak login/token lifecycle/MFA was not executed.
 
-## Exact historical trace result
+## P0 #2 — PostgreSQL Forced-RLS runtime matrix
 
-```text
-port
-→ cable
-→ port
-→ internal_mapping
-→ port
-→ cable
-→ port
-```
+`scripts/postgres_rls_attack_matrix.py` refuses an application connection that is superuser,
+`BYPASSRLS`, table owner, or connected to a table without both RLS and FORCE RLS. It then attempts
+Tenant A list/direct lookup/update/delete/insert against Tenant B and proves own-tenant insert.
+Role-precondition tests pass. `make postgres-rls` returned `NOT_EXECUTED` because the two required
+PostgreSQL DSNs are not configured; therefore runtime RLS confidence is not 100%.
 
-This path is produced from persisted `CableTermination` and `PortMapping` rows and includes ordered route segment coordinates for the selected horizontal cable.
+## P0 #3 — HTTP security boundary
 
-## Security and negative cases in the 27-test suite
+Automated tests cover:
 
-- Tenant A query cannot see Tenant B rack
-- Tenant A direct object lookup returns not found for Tenant B rack
-- cross-tenant write is rejected before flush
-- contractor grant only works for matching project/location descendant
-- expired grant is denied
-- occupied port cannot receive a second cable
-- incompatible media is rejected
-- rack U overlap and reserved position are rejected
-- tester cannot approve own restricted test
-- failed test cannot be commissioned
-- audit update/delete are rejected
-- PostgreSQL RLS migration table coverage is checked
+- fixed-window 429 response and rate-limit headers
+- health/readiness exemption
+- explicit CORS allow-origin behavior
+- Trusted Host integration in the application
+- HTTPS enforcement with only explicitly trusted proxy headers
+- HSTS on secure requests
+- cookie double-submit CSRF for unsafe methods
+- Bearer requests do not depend on cookie CSRF
+- CSP, no-store, nosniff, frame, referrer and permissions headers
+- production settings reject demo auth, insecure issuer/origins, wildcard credentialed CORS,
+  default bootstrap key, unsafe SameSite=None and non-HTTPS production mode
 
-## Not executed in this environment
+The limiter is intentionally single-process. A shared atomic backend and real proxy/TLS deployment
+remain production gates.
 
-| Gate | Reason | Consequence |
-|---|---|---|
-| Real PostgreSQL forced-RLS runtime | No PostgreSQL/Docker runtime | RLS remains 85% confidence, not 100% |
-| Docker Compose boot | Docker unavailable | Compose is configuration-reviewed only |
-| Keycloak login/JWT | No integrated identity runtime; JWT validation not implemented | Identity is not production-complete |
-| Playwright/browser/WebGL visual E2E | No real browser/GPU automation | UI syntax is proven; visual behavior is not fully certified |
-| Load/soak/accessibility/DAST | Tooling and scope not present | Enterprise hardening remains backlog |
+## P0 #4 — Isolated React / Refine scaffold
 
-## Audit interpretation
+`apps/web-react/` declares React, TypeScript, Vite, Refine Core, Refine Ant Design, Ant Design,
+React Router and TanStack Query. It has one request context, bearer/demo adapter, normalized errors,
+PKCE helper, enterprise shell and real API pages for Dashboard, Locations, Rack elevation, Cables,
+Cable Trace and Cable Schedule. The native `apps/web/` and `webgl-viewer.js` are unchanged.
 
-“PASS” proves the stated gate only. It does not upgrade adjacent untested functionality to 100% confidence. Historical PASS entries are explicitly distinguished from the current dry-run so that the progress record does not overstate what was re-executed.
+The npm registry attempt timed out and produced no lockfile. Consequently real package-backed
+TypeScript typecheck, Vitest, Vite build, `/app-next/` serving and browser E2E are **NOT EXECUTED**.
+The passing source gate only proves declarations, TS/TSX parse, context roundtrip and token helpers.
+
+## Confidence boundary
+
+No unexecuted PostgreSQL, npm, Keycloak, browser, Docker, TLS proxy, load, accessibility or DAST
+check is represented as PASS. See `docs/DRY_RUN_STATUS.md` and `WORK_PROGRESS.xlsx` for the exact
+module scores and remaining work.
+
+
+## GitHub publication gate
+
+- Last readable remote `main`: `2536ee32b76cc70d9e6efa172fd24881288568b6`.
+- GitHub Actions remain disabled and no workflow is introduced.
+- Branch/file/ref write actions were explicitly attempted after user authorization, but the current
+  connector runtime returned `Resource not found` for the write resources.
+- Result: local branch/main delivery objects are prepared; remote `main` is **NOT ADVANCED** in this run.

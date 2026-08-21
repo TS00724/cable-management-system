@@ -1,29 +1,45 @@
 # Continuation Status — 2026-08-19
 
-## Repository policy change
+## Current completed batch
 
-- Progress and verification artifacts are kept in Git together with source.
-- GitHub Actions are disabled and the workflow file has been removed.
-- Development uses local dry-run validation.
-- Once the local dry-run passes, the prepared commit may be fast-forwarded directly into `main` without waiting for a PR workflow.
+This batch follows the fixed P0 order:
 
-## Factual frontend status
+1. OIDC JWT signature/issuer/audience/expiry validation and Principal mapping are implemented and
+   covered by positive and negative tests.
+2. A strict ordinary-role PostgreSQL Forced-RLS attack matrix is implemented. Its role checks pass,
+   but the actual database matrix is NOT EXECUTED because real DSNs are unavailable.
+3. Rate limiting, explicit CORS, Trusted Host, HTTPS/HSTS, trusted-proxy and cookie/CSRF boundaries
+   are implemented and automated. Production shared-limit/TLS deployment proof remains.
+4. An isolated React/TypeScript/Refine/Ant Design scaffold is present under `apps/web-react/` while
+   the native `/app/` and custom WebGL remain active. npm/build/browser gates are NOT EXECUTED.
 
-The current source tree is still the native HTML/CSS/ES Modules frontend with a custom WebGL viewer. A React/TypeScript/Refine migration has been selected as the next direction but is not yet present in this source tree. See:
+## Progress
 
-- `docs/CURRENT_FRONTEND_AUDIT.md`
-- `docs/OPEN_SOURCE_FRONTEND_DECISION.md`
-
-## Current platform progress
-
-The existing weighted completion remains **62.26%** because this repository-policy update does not itself implement missing product scope. The first enterprise vertical slice remains intact and locally regression-tested.
+- weighted master scope: **66.40%** (was 63.11%)
+- remaining: **33.60%**
+- DoD: **24 complete / 4 partial / 0 not complete**
+- partial-credit DoD coverage: **92.86%**
 
 ## Latest local dry-run
 
-- 27 backend tests passed
-- Python compile passed
-- legacy frontend and WebGL syntax passed
-- fresh SQLite Alembic migration passed
-- seed ran twice with stable identifiers
+- `make dry-run`: PASS in 14 seconds
+- 56 tests passed; one real PostgreSQL runtime gate skipped
+- 24 focused OIDC/security/RLS checks passed; same runtime gate skipped
+- Python compile and native JS/WebGL syntax passed
+- React declaration/source/context/token gate passed
+- fresh SQLite migration, seed ×2 and seeded CSV export/audit passed
+- npm dependency build, real PostgreSQL, live Keycloak, Docker/TLS and browser E2E remain NOT EXECUTED
 
-See `docs/DRY_RUN_STATUS.md` for the exact gate list and boundaries.
+## Repository policy
+
+- GitHub Actions remain disabled and `.github/workflows` is absent
+- progress and verification artifacts travel with source
+- development uses local `make dry-run`
+- validated changes are applied to `main` only by non-force fast-forward
+
+## Publication status
+
+The local batch is validated. The last readable remote `main` is
+`2536ee32b76cc70d9e6efa172fd24881288568b6`. GitHub write actions were explicitly attempted,
+but the current connector runtime returned `Resource not found`; remote `main` is therefore not
+advanced. A non-force local Git pack and clean source archive are produced as recovery artifacts.

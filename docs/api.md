@@ -1,41 +1,61 @@
 # API
 
-FastAPI 自动提供 OpenAPI (`/docs`, `/openapi.json`)。演示 API 前缀为 `/api/v1`。
+FastAPI provides OpenAPI at `/api/v1/docs` and `/api/v1/openapi.json`. The API prefix is configurable through `API_PREFIX`.
 
-## 已实现资源
+## Implemented resources
 
 | Domain | Endpoints |
 |---|---|
 | System | `GET /health`, `GET /ready` |
 | Platform | `POST /platform/bootstrap` |
-| Tenancy | `GET /tenants/current`, `POST /access-grants`, revoke grant |
+| Tenancy | current tenant, access-grant creation/revocation |
 | Locations | list/create locations |
 | Racks | list/create racks, rack elevation |
 | Assets | list/create device templates and devices, list ports |
-| Pathways | list/create pathway + segments |
+| Pathways | list/create pathways and segments |
 | Cables | list/create cables, dynamic trace |
 | Operations | list/create work orders, install, submit/list/approve tests |
-| Standards | create cable QR label, compliance report |
-| Reporting | dashboard, global search, audit events |
-| Demo | context UUIDs in demo mode only |
+| Standards | cable QR label, compliance report |
+| Reporting | dashboard, global search, audit events, Cable Schedule CSV |
+| Demo | context UUIDs when `DEMO_MODE=true` only |
 
-## 请求上下文
+## Cable Schedule CSV
 
-演示模式使用：
+`GET /api/v1/reports/cable-schedule.csv`
 
-- `X-Tenant-ID`
-- `X-Actor-ID`
-- 承包商范围请求还使用 `X-Project-ID`, `X-Location-ID`
+Query parameters:
 
-生产必须以 OIDC token 建立这些上下文，不能直接信任请求头。
+| Parameter | Type | Meaning |
+|---|---|---|
+| `status` | CableStatus | optional installation-state filter |
+| `project_id` | UUID | optional project filter |
+| `q` | string, max 180 | searches identifier, media, construction, manufacturer and part number |
+| `limit` | integer 1–10,000 | synchronous row limit; default 10,000 |
 
-## API 未完成项
+Response headers:
 
-- 全资源统一分页 envelope、排序、过滤 DSL
-- Idempotency-Key
-- If-Match/ETag 乐观并发 API
-- 批量导入/导出和异步作业
-- 文件上传/下载
-- Webhooks
-- SDK 生成
-- 完整组织、用户、bundle、circuit、document、change-request endpoints
+- `Content-Disposition`: generated CSV filename
+- `Cache-Control: no-store`
+- `X-Export-Row-Count`
+- `X-Export-Total-Count`
+- `X-Export-Truncated`
+
+Authorization and safety:
+
+- requires `report:export`
+- current bulk-export slice only allows tenant members; a scoped contractor remains denied even if a future grant accidentally includes the permission
+- all ORM reads retain tenant criteria, including totals and related objects
+- export writes `report.cable_schedule.exported` to the immutable audit stream
+- formula-prefixed text is neutralized for spreadsheet consumers
+
+## Request context
+
+Demo mode uses `X-Tenant-ID` and `X-Actor-ID`; scoped contractor requests also use `X-Project-ID` and `X-Location-ID`. Production must derive these values from a validated OIDC token and must not trust caller-supplied identity headers.
+
+## API backlog
+
+- uniform pagination envelopes, sorting/filter DSL, idempotency and ETag/If-Match
+- asynchronous large exports and additional CSV/XLSX reports
+- CSV/XLSX dry-run import with mapping preview and row errors
+- secure file upload/download
+- webhooks, SDK generation and full bundle/document/change endpoints

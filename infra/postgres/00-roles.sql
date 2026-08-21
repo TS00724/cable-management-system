@@ -1,6 +1,18 @@
 -- Development role bootstrap. Production passwords belong in a secret manager.
-CREATE ROLE sim_app LOGIN PASSWORD 'sim_app';
-CREATE ROLE sim_platform LOGIN PASSWORD 'sim_platform' BYPASSRLS;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sim_app') THEN
+    CREATE ROLE sim_app LOGIN PASSWORD 'sim_app';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sim_platform') THEN
+    CREATE ROLE sim_platform LOGIN PASSWORD 'sim_platform';
+  END IF;
+END
+$$;
+
+ALTER ROLE sim_app NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;
+ALTER ROLE sim_platform NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION BYPASSRLS;
+
 GRANT CONNECT ON DATABASE sim TO sim_app, sim_platform;
 GRANT USAGE ON SCHEMA public TO sim_app;
 GRANT USAGE, CREATE ON SCHEMA public TO sim_platform;

@@ -1,13 +1,13 @@
 # Open-Source Frontend Decision
 
-**Status:** Proposed / not yet implemented  
+**Status:** Implemented as an isolated source scaffold / not yet active  
 **Decision date:** 2026-08-19
 
 ## Decision
 
-Adopt an incremental migration toward **React + TypeScript + Refine Core + Ant Design**, while keeping the current native JavaScript/WebGL application available as a regression reference until the migrated pages pass local dry-run and browser acceptance gates.
+Adopt an incremental migration toward **React + TypeScript + Refine Core + Ant Design**, while keeping the current native JavaScript/WebGL application available as a regression reference until migrated pages pass local dry-run and browser acceptance gates.
 
-This decision does **not** assert that these dependencies are already installed. The current repository still contains the legacy dependency-free frontend only.
+This decision does **not** assert that these dependencies are already installed. The current repository still contains the dependency-free frontend only; the Cable Schedule button delivered in the current batch is an incremental legacy-UI integration.
 
 ## Options considered
 
@@ -24,8 +24,8 @@ Before any package is committed, its exact version, license, repository URL, pur
 
 ## Guardrails
 
-The migration may change presentation and client-side composition only. It must not redefine tenant isolation, authorization, port occupancy, cable compatibility, rack U conflicts, trace topology, test validity, approval, commissioning or audit immutability.
+The migration may change presentation and client-side composition only. It must not redefine tenant isolation, authorization, bulk-export boundaries, port occupancy, cable compatibility, rack U conflicts, trace topology, test validity, approval, commissioning or audit immutability.
 
 ## Git / validation policy
 
-Per current project direction, GitHub Actions are disabled. Development verification is performed with local dry-run commands and the evidence is recorded in `docs/DRY_RUN_STATUS.md` and `docs/VERIFICATION_REPORT.md` before `main` is advanced.
+GitHub Actions are disabled. Development verification is performed with `make dry-run`; evidence is recorded in `docs/DRY_RUN_STATUS.md` and `docs/VERIFICATION_REPORT.md` before `main` is advanced directly by fast-forward.

@@ -4,28 +4,42 @@
   "repository": "TS00724/cable-management-system",
   "policy": {
     "github_actions": "disabled",
-    "validation": "local dry-run only during development",
-    "main_update": "direct fast-forward after local dry-run"
-  },
-  "frontend": {
-    "current": "HTML + CSS + native ES Modules + custom WebGL",
-    "react_typescript_present": false,
-    "selected_migration_direction": "React + TypeScript + Refine Core + Ant Design",
-    "migration_status": "not yet implemented"
+    "validation": "local make dry-run",
+    "main_update": "direct non-force fast-forward after dry-run",
+    "force_push": false
   },
   "completion": {
-    "weighted_scope_percent": 62.26,
-    "remaining_percent": 37.74,
-    "definition_of_done_complete": 23,
+    "weighted_scope_percent": 66.4,
+    "remaining_percent": 33.6,
+    "definition_of_done_complete": 24,
     "definition_of_done_partial": 4,
-    "definition_of_done_not_complete": 1
+    "definition_of_done_not_complete": 0,
+    "partial_credit_coverage_percent": 92.86
+  },
+  "p0": {
+    "oidc_jwt_and_principal_mapping": "implemented and automated; live Keycloak pending",
+    "postgresql_forced_rls": "attack matrix and role checks implemented; runtime NOT EXECUTED",
+    "http_security": "rate limit, strict CORS/TLS, trusted proxy, HSTS and cookie/CSRF implemented and automated",
+    "react_refine_antd": "isolated scaffold implemented; npm/typecheck/test/build/browser runtime pending"
   },
   "dry_run": {
-    "pytest": "27 passed",
+    "result": "PASS",
+    "elapsed_seconds": 14,
+    "pytest": "56 passed; 1 skipped",
+    "p0_focused": "24 passed; 1 skipped",
     "python_compile": "passed",
-    "frontend_syntax": "passed",
-    "webgl_syntax": "passed",
+    "legacy_frontend_syntax": "passed",
+    "react_source_gate": "passed",
     "fresh_sqlite_migration": "passed",
-    "seed_idempotency": "passed"
+    "seed_idempotency": "passed",
+    "seeded_export_smoke": "passed",
+    "last_executed": "2026-08-19 19:27 +0800"
+  },
+  "publication": {
+    "remote_main_before": "2536ee32b76cc70d9e6efa172fd24881288568b6",
+    "local_delivery": "validated and packaged",
+    "remote_main_advanced": false,
+    "github_write_result": "Resource not found for branch/file/ref write resources",
+    "github_actions_used": false
   }
 }

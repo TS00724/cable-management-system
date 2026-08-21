@@ -2,6 +2,10 @@ class DomainError(Exception):
     status_code = 400
 
 
+class AuthenticationError(DomainError):
+    status_code = 401
+
+
 class ValidationError(DomainError):
     status_code = 422
 
