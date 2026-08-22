@@ -64,9 +64,15 @@ class Settings(BaseSettings):
     oidc_allow_verified_email_linking: bool = False
 
     rate_limit_enabled: bool = True
+    rate_limit_backend: Literal["memory", "database"] = "memory"
     rate_limit_requests: int = 240
     rate_limit_window_seconds: int = 60
     rate_limit_exempt_paths: list[str] | str = ["/api/v1/health", "/api/v1/ready"]
+    rate_limit_database_url: str | None = None
+    rate_limit_key_secret: str = "replace-rate-limit-secret"
+    rate_limit_retention_seconds: int = 3600
+    rate_limit_cleanup_interval_seconds: int = 60
+    rate_limit_fail_mode: Literal["open", "closed"] = "closed"
 
     require_https: bool = False
     trusted_proxy_ips: list[str] | str = []
@@ -105,6 +111,10 @@ class Settings(BaseSettings):
     def validate_security_configuration(self) -> "Settings":
         if self.rate_limit_requests < 1 or self.rate_limit_window_seconds < 1:
             raise ValueError("Rate-limit count and window must both be positive")
+        if self.rate_limit_retention_seconds < self.rate_limit_window_seconds:
+            raise ValueError("Rate-limit retention must cover at least one complete window")
+        if self.rate_limit_cleanup_interval_seconds < 1:
+            raise ValueError("Rate-limit cleanup interval must be positive")
         if self.oidc_clock_skew_seconds < 0 or self.oidc_jwks_cache_seconds < 0:
             raise ValueError("OIDC clock skew and JWKS cache duration cannot be negative")
         if self.cors_allow_credentials and "*" in self.cors_origins:
@@ -121,6 +131,10 @@ class Settings(BaseSettings):
                 raise ValueError("Production requires HTTPS enforcement")
             if self.platform_bootstrap_key == "replace-this-secret":
                 raise ValueError("Production bootstrap key must be replaced")
+            if self.rate_limit_backend != "database":
+                raise ValueError("Production requires the shared database rate-limit backend")
+            if self.rate_limit_key_secret == "replace-rate-limit-secret":
+                raise ValueError("Production rate-limit key secret must be replaced")
             if "*" in self.allowed_hosts:
                 raise ValueError("Production allowed hosts cannot contain a wildcard")
             if urlparse(self.oidc_issuer_url).scheme != "https":

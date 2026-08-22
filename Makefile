@@ -1,4 +1,4 @@
-.PHONY: test verify dry-run postgres-rls seed run
+.PHONY: test verify dry-run postgres-rls runtime-shared-rate-limit seed run
 
 test:
 	cd apps/api && PYTHONPATH=.:../.. pytest -q
@@ -14,6 +14,9 @@ dry-run:
 
 postgres-rls:
 	PYTHONPATH=apps/api:. python scripts/postgres_rls_attack_matrix.py
+
+runtime-shared-rate-limit:
+	PYTHONPATH=apps/api:. python scripts/runtime_shared_rate_limit_smoke.py
 
 seed:
 	cd apps/api && PYTHONPATH=. python -m app.seed
