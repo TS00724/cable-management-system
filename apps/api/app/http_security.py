@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import hmac
 import math
-import threading
 import time
 import uuid
-from dataclasses import dataclass
 
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -13,61 +11,31 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.config import Settings
-
-
-@dataclass(frozen=True)
-class RateLimitDecision:
-    allowed: bool
-    limit: int
-    remaining: int
-    reset_epoch: int
-
-
-class FixedWindowRateLimiter:
-    """Small single-process development limiter.
-
-    Production replicas must replace this with a shared atomic backend; the class is deliberately
-    isolated so that swap does not affect endpoint authorization code.
-    """
-
-    def __init__(self, *, limit: int, window_seconds: int) -> None:
-        self.limit = limit
-        self.window_seconds = window_seconds
-        self._lock = threading.Lock()
-        self._windows: dict[str, tuple[int, int]] = {}
-
-    def consume(self, key: str, *, now: float | None = None) -> RateLimitDecision:
-        timestamp = now if now is not None else time.time()
-        window_start = int(timestamp // self.window_seconds) * self.window_seconds
-        reset_epoch = window_start + self.window_seconds
-        with self._lock:
-            previous = self._windows.get(key)
-            count = previous[1] if previous and previous[0] == window_start else 0
-            count += 1
-            self._windows[key] = (window_start, count)
-            # Opportunistic cleanup keeps cardinality bounded in long-running development servers.
-            if len(self._windows) > 10000:
-                stale_before = window_start - self.window_seconds
-                self._windows = {
-                    item_key: item for item_key, item in self._windows.items() if item[0] >= stale_before
-                }
-        allowed = count <= self.limit
-        return RateLimitDecision(
-            allowed=allowed,
-            limit=self.limit,
-            remaining=max(self.limit - count, 0),
-            reset_epoch=reset_epoch,
-        )
+from app.shared_rate_limit import (
+    DatabaseFixedWindowRateLimiter,
+    FixedWindowRateLimiter,
+    RateLimitDecision,
+)
 
 
 class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, *, settings: Settings) -> None:  # type: ignore[no-untyped-def]
         super().__init__(app)
         self.settings = settings
-        self.limiter = FixedWindowRateLimiter(
-            limit=settings.rate_limit_requests,
-            window_seconds=settings.rate_limit_window_seconds,
-        )
+        if settings.rate_limit_backend == "database":
+            self.limiter = DatabaseFixedWindowRateLimiter(
+                database_url=settings.rate_limit_database_url or settings.database_url,
+                limit=settings.rate_limit_requests,
+                window_seconds=settings.rate_limit_window_seconds,
+                key_secret=settings.rate_limit_key_secret,
+                retention_seconds=settings.rate_limit_retention_seconds,
+                cleanup_interval_seconds=settings.rate_limit_cleanup_interval_seconds,
+            )
+        else:
+            self.limiter = FixedWindowRateLimiter(
+                limit=settings.rate_limit_requests,
+                window_seconds=settings.rate_limit_window_seconds,
+            )
 
     def _trusted_proxy(self, request: Request) -> bool:
         peer = request.client.host if request.client else ""
@@ -80,6 +48,11 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
             if candidate:
                 return candidate
         return request.client.host if request.client else "unknown"
+
+    def _limiter_key(self, request: Request) -> str:
+        tenant = request.headers.get("x-tenant-id", "anonymous-tenant")
+        actor = request.headers.get("x-actor-id", "anonymous-actor")
+        return f"{tenant}|{actor}|{self._client_address(request)}"
 
     def _secure_request(self, request: Request) -> bool:
         if request.url.scheme == "https":
@@ -95,6 +68,7 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
         request_id: str,
         secure_request: bool,
         rate: RateLimitDecision | None,
+        degraded_rate_limit: bool = False,
     ) -> None:
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -117,6 +91,8 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
             response.headers["X-RateLimit-Limit"] = str(rate.limit)
             response.headers["X-RateLimit-Remaining"] = str(rate.remaining)
             response.headers["X-RateLimit-Reset"] = str(rate.reset_epoch)
+        if degraded_rate_limit:
+            response.headers["X-RateLimit-Policy"] = "degraded-open"
 
     async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
@@ -134,13 +110,26 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
             return response
 
         rate: RateLimitDecision | None = None
+        degraded_rate_limit = False
         if (
             self.settings.rate_limit_enabled
             and request.method != "OPTIONS"
             and request.url.path not in self.settings.rate_limit_exempt_paths
         ):
-            rate = self.limiter.consume(self._client_address(request))
-            if not rate.allowed:
+            try:
+                rate = self.limiter.consume(self._limiter_key(request))
+            except Exception:
+                if self.settings.rate_limit_fail_mode == "closed":
+                    response = JSONResponse(
+                        status_code=503,
+                        content={"detail": "Rate-limit backend unavailable", "request_id": request_id},
+                    )
+                    self._add_security_headers(
+                        response, request_id=request_id, secure_request=secure_request, rate=None
+                    )
+                    return response
+                degraded_rate_limit = True
+            if rate is not None and not rate.allowed:
                 response = JSONResponse(
                     status_code=429,
                     content={"detail": "Rate limit exceeded", "request_id": request_id},
@@ -149,10 +138,7 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
                     max(rate.reset_epoch - math.floor(time.time()), 1)
                 )
                 self._add_security_headers(
-                    response,
-                    request_id=request_id,
-                    secure_request=secure_request,
-                    rate=rate,
+                    response, request_id=request_id, secure_request=secure_request, rate=rate
                 )
                 return response
 
@@ -164,11 +150,7 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
         ):
             cookie_token = request.cookies.get(self.settings.csrf_cookie_name)
             header_token = request.headers.get(self.settings.csrf_header_name)
-            if (
-                not cookie_token
-                or not header_token
-                or not hmac.compare_digest(cookie_token, header_token)
-            ):
+            if not cookie_token or not header_token or not hmac.compare_digest(cookie_token, header_token):
                 response = JSONResponse(
                     status_code=403,
                     content={"detail": "CSRF token validation failed", "request_id": request_id},
@@ -178,6 +160,7 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
                     request_id=request_id,
                     secure_request=secure_request,
                     rate=rate,
+                    degraded_rate_limit=degraded_rate_limit,
                 )
                 return response
 
@@ -189,5 +172,6 @@ class SecurityBoundaryMiddleware(BaseHTTPMiddleware):
             request_id=request_id,
             secure_request=secure_request,
             rate=rate,
+            degraded_rate_limit=degraded_rate_limit,
         )
         return response

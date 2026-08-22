@@ -6,13 +6,8 @@ from pathlib import Path
 from app.models import AuditEvent, Base, TenantOwnedMixin
 
 
-def load_migration():
-    path = (
-        Path(__file__).parents[1]
-        / "migrations"
-        / "versions"
-        / "200000000002_postgresql_rls_and_audit_guard.py"
-    )
+def load_migration(filename: str = "200000000002_postgresql_rls_and_audit_guard.py"):
+    path = Path(__file__).parents[1] / "migrations" / "versions" / filename
     spec = importlib.util.spec_from_file_location("rls_migration", path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
@@ -37,3 +32,11 @@ def test_postgresql_rls_forces_policy_and_audit_trigger() -> None:
     assert "FORCE ROW LEVEL SECURITY" in source
     assert "CREATE TRIGGER audit_events_append_only" in source
     assert "current_setting('app.current_tenant'" in source
+
+
+def test_shared_rate_limit_migration() -> None:
+    module, path = load_migration("200000000003_shared_rate_limit_windows.py")
+    assert module.down_revision == "200000000002"
+    source = path.read_text()
+    assert "rate_limit_windows" in source
+    assert "ix_rate_limit_window_expires" in source
