@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+from app import fiber_models  # noqa: F401 -- include extension tables
 from app.models import AuditEvent, Base, TenantOwnedMixin
 
 
@@ -23,7 +24,8 @@ def test_postgresql_rls_covers_every_tenant_table() -> None:
         if issubclass(mapper.class_, TenantOwnedMixin)
     }
     model_tables.add(AuditEvent.__tablename__)
-    assert set(module.TENANT_TABLES) == model_tables
+    fiber, _ = load_migration("200000000004_fiber_splice_topology.py")
+    assert set(module.TENANT_TABLES) | set(fiber.TENANT_TABLES) == model_tables
 
 
 def test_postgresql_rls_forces_policy_and_audit_trigger() -> None:

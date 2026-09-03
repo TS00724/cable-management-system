@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from sqlalchemy import Engine, and_, create_engine, event, or_, text
 from sqlalchemy.orm import Session, sessionmaker, with_loader_criteria
 
+from app import fiber_models  # noqa: F401 -- register extension metadata
 from app.config import get_settings
 from app.models import AuditEvent, Base, StandardProfile, TenantOwnedMixin
 

@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_platform_db, get_principal
+from app.api.fiber import build_fiber_router
 from app.audit import record_audit
 from app.config import get_settings
 from app.db import SessionLocal
@@ -78,6 +79,7 @@ app = FastAPI(
     openapi_url=f"{settings.api_prefix}/openapi.json",
     docs_url=f"{settings.api_prefix}/docs",
 )
+app.include_router(build_fiber_router(get_db, get_principal), prefix=settings.api_prefix)
 app.add_middleware(SecurityBoundaryMiddleware, settings=settings)
 app.add_middleware(
     CORSMiddleware,

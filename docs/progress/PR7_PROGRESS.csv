@@ -1,0 +1,12 @@
+order,node,status,evidence_or_blocker,next_gate
+1,PostgreSQL ordinary-role Forced RLS,BLOCKED,No real service or test DSNs supplied,Execute raw-SQL attack matrix with non-owner NOSUPERUSER NOBYPASSRLS roles
+2,Keycloak PKCE refresh logout MFA expiry,BLOCKED,No reachable identity service or test credentials,Real browser lifecycle
+3,MinIO S3 ClamAV lifecycle,BLOCKED,No object-storage or antivirus services,Real uploads scanning signed download version restore
+4A,Fiber bundle strand cassette splice-slot API,LOCAL_GATES_PASSED,PR7_FIBER_VERIFICATION.md; 47 tests,Full host-app regression and real PostgreSQL verification
+4B,Fiber React UI,SOURCE_AND_HELPER_GATES_PASSED,4 syntax files and strict helper checks,Full React typecheck Vite build browser E2E
+4C,Port termination Pair Channel OTDR Breakout generic Trace,NOT_IMPLEMENTED,Not present in verified foundation slice,Shared physical-port occupancy and persistent advanced topology
+5,2D Floor Plan Editor,NOT_STARTED_THIS_BATCH,Depends on upstream verified infrastructure,Versioned persistence optimistic concurrency editor
+6,Camera QR PWA queue conflicts,NOT_STARTED_THIS_BATCH,No new implementation in this batch,Secure scan durable queue idempotency conflict UX
+7,NetBox signed retry webhook,NOT_STARTED_THIS_BATCH,No new implementation in this batch,Adapter contract durable outbox replay-safe signatures
+8,OpenTelemetry logs metrics traces alerts,NOT_STARTED_THIS_BATCH,No new implementation in this batch,Instrumented runtime and alert delivery verification
+9,PITR attachments RPO RTO,BLOCKED,No isolated recovery environment or backups,Approved destructive drill with measured results
