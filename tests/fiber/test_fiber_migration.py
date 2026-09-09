@@ -9,7 +9,7 @@ from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from sqlalchemy import inspect, select
 
-from app.fiber_models import FIBER_TABLES, FiberBundle
+from app.fiber_models import REVISION_004_TABLES, FiberBundle
 from app.models import Base, Cable
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -32,11 +32,12 @@ def test_revision_roundtrip_preserves_legacy_rows(env):
         context = MigrationContext.configure(connection)
         with Operations.context(context):
             module.downgrade()
-            assert not set(FIBER_TABLES) & set(inspect(connection).get_table_names())
+            assert not set(REVISION_004_TABLES) & set(inspect(connection).get_table_names())
             module.upgrade()
-        assert set(FIBER_TABLES) <= set(inspect(connection).get_table_names())
+        assert set(REVISION_004_TABLES) <= set(inspect(connection).get_table_names())
         assert len(connection.execute(select(Cable.id)).all()) == count_before
-        assert compare_metadata(context, Base.metadata) == []
+        # Full live metadata now includes revision 005. Its zero-diff gate is
+        # executed in test_fiber_advanced_migration.py after both revisions.
     # Actually write through the service after the upgrade.
     bundle = env.write(env.service().provision_bundle, env.cables[0].id, "after-upgrade")
     assert len(bundle["strands"]) == 4
@@ -52,7 +53,7 @@ def test_postgresql_offline_sql_enables_and_forces_all_six_tables():
     with Operations.context(context):
         revision().upgrade()
     sql = output.getvalue()
-    for table in FIBER_TABLES:
+    for table in REVISION_004_TABLES:
         assert f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY' in sql
         assert f'ALTER TABLE "{table}" FORCE ROW LEVEL SECURITY' in sql
         assert f'CREATE POLICY tenant_isolation ON "{table}"' in sql
@@ -89,5 +90,5 @@ def test_application_mount_uses_the_existing_auth_dependencies():
 
 
 def test_frozen_migration_does_not_import_live_models():
-    assert set(revision().TENANT_TABLES) == set(FIBER_TABLES)
+    assert set(revision().TENANT_TABLES) == set(REVISION_004_TABLES)
     assert "from app" not in MIGRATION.read_text()
