@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app import db as tenant_events  # Register the real application ORM guards.
 from app.models import (
     AccessGrant, AccessGrantStatus, Base, Cable, Device, Location, LocationType,
-    Organization, OrganizationType, Project, Tenant, TenantMembership, UserIdentity,
+    Organization, OrganizationType, Port, Project, Tenant, TenantMembership, UserIdentity,
 )
 from app.fiber_models import FIBER_TABLES  # noqa: F401
 from app.security import Principal, resolve_principal
@@ -30,6 +30,7 @@ def env(tmp_path):
     factory = sessionmaker(bind=engine, class_=Session, expire_on_commit=False, autoflush=False)
     session = factory()
     tenants, owners, projects, locations, devices, cables = [], [], [], [], [], []
+    fiber_ports, copper_ports, copper_cables = [], [], []
     for n in range(2):
         org = Organization(name=f"customer-{n}", organization_type=OrganizationType.CUSTOMER)
         session.add(org); session.flush()
@@ -47,15 +48,47 @@ def env(tmp_path):
             loc = Location(tenant_id=tenant.id, identifier=f"TR-{k}", name=f"Room {k}",
                            location_type=LocationType.TR)
             session.add_all([project, loc]); session.flush()
-            device = Device(tenant_id=tenant.id, location_id=loc.id, identifier=f"D-{k}",
-                            name=f"ODF {k}", device_type="patch_panel")
+            device = Device(tenant_id=tenant.id, location_id=loc.id, identifier=f"D-{n}-{k}",
+                            name=f"ODF {n}-{k}", device_type="patch_panel")
             session.add(device); session.flush()
             projects.append(project); locations.append(loc); devices.append(device)
+            for i in range(1, 5):
+                fiber_port = Port(
+                    tenant_id=tenant.id,
+                    device_id=device.id,
+                    identifier=f"F{i}",
+                    label=f"Fiber {i}",
+                    connector_type="LC",
+                    media_type="fiber_os2",
+                    position_index=i,
+                )
+                copper_port = Port(
+                    tenant_id=tenant.id,
+                    device_id=device.id,
+                    identifier=f"C{i}",
+                    label=f"Copper {i}",
+                    connector_type="RJ45",
+                    media_type="copper_cat6a",
+                    position_index=100 + i,
+                )
+                session.add_all([fiber_port, copper_port])
+                fiber_ports.append(fiber_port)
+                copper_ports.append(copper_port)
             for i in range(4):
                 cable = Cable(tenant_id=tenant.id, project_id=project.id,
-                              identifier=f"F-{k}-{i}", media_type="fiber_os2",
+                              identifier=f"F-{n}-{k}-{i}", media_type="fiber_os2",
                               construction="trunk", strand_count=4)
                 session.add(cable); cables.append(cable)
+            copper_cable = Cable(
+                tenant_id=tenant.id,
+                project_id=project.id,
+                identifier=f"CU-{n}-{k}",
+                media_type="copper_cat6a",
+                construction="horizontal",
+                pair_count=4,
+            )
+            session.add(copper_cable)
+            copper_cables.append(copper_cable)
     contractor_org = Organization(name="contractor", organization_type=OrganizationType.CONTRACTOR)
     session.add(contractor_org); session.flush()
     contractor = UserIdentity(organization_id=contractor_org.id,
@@ -98,6 +131,8 @@ def env(tmp_path):
 
     yield SimpleNamespace(db=session, engine=engine, factory=factory, tenants=tenants,
                            owners=owners, projects=projects, locations=locations,
-                           devices=devices, cables=cables, contractor=contractor, reader=reader,
-                           grant=grant, principal=owner_principal, service=service, write=write)
+                           devices=devices, cables=cables, fiber_ports=fiber_ports,
+                           copper_ports=copper_ports, copper_cables=copper_cables,
+                           contractor=contractor, reader=reader, grant=grant,
+                           principal=owner_principal, service=service, write=write)
     session.close(); engine.dispose()
