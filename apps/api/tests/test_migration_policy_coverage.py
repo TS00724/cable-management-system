@@ -25,7 +25,12 @@ def test_postgresql_rls_covers_every_tenant_table() -> None:
     }
     model_tables.add(AuditEvent.__tablename__)
     fiber, _ = load_migration("200000000004_fiber_splice_topology.py")
-    assert set(module.TENANT_TABLES) | set(fiber.TENANT_TABLES) == model_tables
+    advanced, _ = load_migration("200000000005_advanced_fiber_topology.py")
+    assert (
+        set(module.TENANT_TABLES)
+        | set(fiber.TENANT_TABLES)
+        | set(advanced.TENANT_TABLES)
+    ) == model_tables
 
 
 def test_postgresql_rls_forces_policy_and_audit_trigger() -> None:

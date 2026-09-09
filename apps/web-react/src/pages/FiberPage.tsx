@@ -95,7 +95,7 @@ function FiberWorkbench({ getContext }: Props) {
 
   return <Space orientation="vertical" size="middle" style={{ display: "flex" }}>
     <Typography.Title level={2}>Fiber / 熔接槽位</Typography.Title>
-    <Alert type="info" title="此节点管理单纤芯与熔接盘槽位；端口端接、Pair/Channel、OTDR、Breakout 和通用 Cable Trace 尚未接入。" />
+    <Alert type="info" title="此页管理纤芯束、Cassette 与熔接槽位；端口端接、Pair/Channel、Breakout、OTDR 和通用 Trace 已迁移到 Fiber Topology 页面。" />
     {notice && <Alert type="error" title={notice} showIcon />}
     {conflict && <Alert type="warning" title="写入已锁定。请重新加载目标 Cassette，核对最新槽位版本后再操作。" />}
     <Card title="1. 初始化或读取光缆纤芯">

@@ -7,7 +7,8 @@ import { TenantContextEditor } from "./TenantContextEditor";
 
 const { Header, Sider, Content } = Layout;
 const items = [
-  { key: "/fiber", icon: <NodeIndexOutlined />, label: <Link to="/fiber">Fiber</Link> },
+  { key: "/fiber", icon: <NodeIndexOutlined />, label: <Link to="/fiber">Fiber Splice</Link> },
+  { key: "/fiber-topology", icon: <LinkOutlined />, label: <Link to="/fiber-topology">Fiber Topology</Link> },
   { key: "/", icon: <DashboardOutlined />, label: <Link to="/">Dashboard</Link> },
   { key: "/locations", icon: <ApartmentOutlined />, label: <Link to="/locations">Locations</Link> },
   { key: "/racks", icon: <NodeIndexOutlined />, label: <Link to="/racks">Racks</Link> },

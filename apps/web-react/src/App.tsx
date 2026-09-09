@@ -10,6 +10,7 @@ import { LocationsPage } from "./pages/LocationsPage";
 import { RacksPage } from "./pages/RacksPage";
 import { CablesPage } from "./pages/CablesPage";
 import { FiberPage } from "./pages/FiberPage";
+import { FiberTopologyPage } from "./pages/FiberTopologyPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OidcCallbackPage } from "./pages/OidcCallbackPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -24,7 +25,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/oidc/callback" element={<OidcCallbackPage />} />
-        <Route path="/*" element={<AppShell context={context} onContextChange={updateContext}><Routes><Route index element={<DashboardPage getContext={getContext} />} /><Route path="locations" element={<LocationsPage getContext={getContext} />} /><Route path="racks" element={<RacksPage getContext={getContext} />} /><Route path="cables" element={<CablesPage getContext={getContext} />} /><Route path="fiber" element={<FiberPage getContext={getContext} />} /><Route path="error" element={<ErrorComponent />} /><Route path="404" element={<NotFoundPage />} /><Route path="*" element={<Navigate to="/404" replace />} /></Routes></AppShell>} />
+        <Route path="/*" element={<AppShell context={context} onContextChange={updateContext}><Routes><Route index element={<DashboardPage getContext={getContext} />} /><Route path="locations" element={<LocationsPage getContext={getContext} />} /><Route path="racks" element={<RacksPage getContext={getContext} />} /><Route path="cables" element={<CablesPage getContext={getContext} />} /><Route path="fiber" element={<FiberPage getContext={getContext} />} /><Route path="fiber-topology" element={<FiberTopologyPage getContext={getContext} />} /><Route path="error" element={<ErrorComponent />} /><Route path="404" element={<NotFoundPage />} /><Route path="*" element={<Navigate to="/404" replace />} /></Routes></AppShell>} />
       </Routes>
     </Refine>
   </BrowserRouter>;
