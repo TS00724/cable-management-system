@@ -2,11 +2,11 @@ order,node,status,evidence_or_blocker,next_gate
 1,PostgreSQL ordinary-role Forced RLS,IMPLEMENTED_EXTERNAL_VALIDATION_PENDING,Existing attack harness and offline policy checks; no real ordinary-role DSNs,Execute raw-SQL matrix with non-owner NOSUPERUSER NOBYPASSRLS roles
 2,Keycloak PKCE refresh logout MFA expiry,CORE_IMPLEMENTED_LIVE_VALIDATION_PENDING,OIDC JWT/JWKS boundary exists; browser lifecycle still needs a reachable realm,Add local lifecycle harness then execute against real Keycloak
 3,MinIO S3 ClamAV lifecycle,IMPLEMENTATION_PENDING,Actual main source does not contain the previously described complete storage slice,Implement adapters and local service-stack tests before external validation
-4A,Fiber bundle strand cassette splice-slot API,LOCAL_GATES_PASSED,PR7_FIBER_VERIFICATION.md plus current 71-test regression,Real PostgreSQL locking and full host-app regression
-4B,Fiber React UI and advanced workbench,SOURCE_AND_HELPER_GATES_PASSED,10 TS or TSX syntax checks; two strict helper checks; 42 assertions,Full dependency typecheck Vite build and browser E2E
-4C,Port termination Pair Channel OTDR Breakout generic Trace,LOCAL_GATES_PASSED,PR7_ADVANCED_FIBER_VERIFICATION.md; migration 005; 71 targeted tests,Full host-app regression then real PostgreSQL runtime proof
-5,2D Floor Plan Editor,NEXT_NODE,Fiber C2 and C3 code plus local gates complete,Versioned persistence optimistic concurrency editor and browser interaction tests
-6,Camera QR PWA queue conflicts,NOT_STARTED,No implementation in PR7 yet,Secure scan durable queue idempotency replay and conflict UX
-7,NetBox signed retry webhook,NOT_STARTED,No implementation in PR7 yet,Adapter contract durable outbox replay-safe signatures
-8,OpenTelemetry logs metrics traces alerts,NOT_STARTED,No implementation in PR7 yet,Instrumented runtime collector failure and alert tests
+4A,Fiber bundle strand cassette splice-slot API,REMOTE_CODE_AND_LOCAL_GATES_PASSED,C1 source on PR7; 47 focused tests; included in 71-test advanced regression,Full host-app regression and real PostgreSQL verification
+4B,Fiber React UI and advanced workbench,LOCAL_GATES_PASSED_PUBLICATION_IN_PROGRESS,10 TS or TSX syntax checks; two strict helper checks; 42 assertions,Publish remaining C2/C3 source then full dependency typecheck Vite build browser E2E
+4C,Port termination Pair Channel OTDR Breakout generic Trace,LOCAL_GATES_PASSED_PUBLICATION_IN_PROGRESS,PR7_ADVANCED_FIBER_VERIFICATION.md; migration 005; 71 targeted tests; evidence published,Atomically publish validated C2/C3 source and verify remote diff
+5,2D Floor Plan Editor,NEXT_NODE_AFTER_C2C3_PUBLICATION,Fiber C2/C3 local gates are complete,Versioned persistence optimistic concurrency editor and browser interaction tests
+6,Camera QR PWA queue conflicts,NOT_STARTED,No reliable implementation in PR7 yet,Secure scan durable queue idempotency replay and conflict UX
+7,NetBox signed retry webhook,NOT_STARTED,No reliable implementation in PR7 yet,Adapter contract durable outbox replay-safe signatures
+8,OpenTelemetry logs metrics traces alerts,NOT_STARTED,No reliable implementation in PR7 yet,Instrumented runtime collector failure and alert tests
 9,PITR attachments RPO RTO,EXTERNAL_VALIDATION_PENDING,Needs implemented storage plus isolated recovery stack,Approved destructive drill with measured RPO and RTO
