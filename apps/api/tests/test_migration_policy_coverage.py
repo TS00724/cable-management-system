@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 
 from app import fiber_models  # noqa: F401 -- include extension tables
+from app import floorplan_models  # noqa: F401 -- include Floor Plan tables
 from app.models import AuditEvent, Base, TenantOwnedMixin
 
 
@@ -26,10 +27,12 @@ def test_postgresql_rls_covers_every_tenant_table() -> None:
     model_tables.add(AuditEvent.__tablename__)
     fiber, _ = load_migration("200000000004_fiber_splice_topology.py")
     advanced, _ = load_migration("200000000005_advanced_fiber_topology.py")
+    floorplan, _ = load_migration("200000000006_floor_plan_editor.py")
     assert (
         set(module.TENANT_TABLES)
         | set(fiber.TENANT_TABLES)
         | set(advanced.TENANT_TABLES)
+        | set(floorplan.TENANT_TABLES)
     ) == model_tables
 
 
